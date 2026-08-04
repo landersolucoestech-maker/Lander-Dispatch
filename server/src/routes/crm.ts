@@ -42,7 +42,7 @@ router.get("/crm/contacts", async (req, res): Promise<void> => {
   if (search) {
     conditions.push(or(
       ilike(crmContactsTable.companyName, `%${search}%`),
-      ilike(crmContactsTable.primaryContact, `%${search}%`),
+      ilike(crmContactsTable.primaryContactName, `%${search}%`),
       ilike(crmContactsTable.email, `%${search}%`),
     ));
   }
@@ -202,7 +202,7 @@ router.post("/crm/leads", async (req, res): Promise<void> => {
   const insertData = {
     ...data,
     state: data.state ? data.state.toUpperCase() : undefined,
-    status: "Active", // new leads are always Active
+    status: "Active",
     rating: data.rating != null ? String(data.rating) : undefined,
     estimatedWeeklyRevenue: data.estimatedWeeklyRevenue != null ? String(data.estimatedWeeklyRevenue) : undefined,
   };
@@ -245,7 +245,6 @@ router.patch("/crm/leads/:leadId", async (req, res): Promise<void> => {
   if (data.state !== undefined) updateData.state = data.state ? data.state.toUpperCase() : null;
   if (data.rating !== undefined) updateData.rating = data.rating != null ? String(data.rating) : null;
   if (data.estimatedWeeklyRevenue !== undefined) updateData.estimatedWeeklyRevenue = data.estimatedWeeklyRevenue != null ? String(data.estimatedWeeklyRevenue) : null;
-  // Never allow status/lastContact to be set via this endpoint (controlled by backend)
   delete updateData.status;
   delete updateData.lastContact;
 
