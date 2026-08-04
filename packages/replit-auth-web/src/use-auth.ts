@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
 import type { AuthUser } from '@workspace/api-client-react';
+import { useCallback, useEffect, useState } from 'react';
 
 export type { AuthUser };
 
@@ -11,8 +11,12 @@ interface AuthState {
   logout: () => void;
 }
 
-function getBasePath() {
-  return import.meta.env.BASE_URL.replace(/\/+$/, '') || '/';
+function getBasePath(): string {
+  const baseElement = document.querySelector('base');
+  if (!baseElement) return '/';
+
+  const baseUrl = new URL(baseElement.href, window.location.origin);
+  return baseUrl.pathname.replace(/\/+$/, '') || '/';
 }
 
 export function useAuth(): AuthState {
@@ -58,7 +62,7 @@ export function useAuth(): AuthState {
   return {
     user,
     isLoading,
-    isAuthenticated: !!user,
+    isAuthenticated: Boolean(user),
     login,
     logout,
   };
