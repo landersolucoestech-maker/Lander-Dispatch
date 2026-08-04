@@ -1,16 +1,8 @@
+import type { ActivityItem } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/shared/components/ui/card";
 import { Link } from "wouter";
-import { Button } from "@/shared/components/ui/button";
 import { formatDateTime } from "@/shared/lib/utils";
 import { Truck, Users, Building2, CheckCircle2, AlertTriangle } from "lucide-react";
-
-interface ActivityItem {
-  id: number;
-  entityType: string;
-  entityId: number;
-  description: string;
-  createdAt: string;
-}
 
 interface ActivityFeedProps {
   activity?: ActivityItem[];
@@ -49,7 +41,7 @@ export function ActivityFeed({ activity, isLoading }: ActivityFeedProps) {
                     <span className="text-xs font-mono text-primary uppercase border border-primary/20 bg-primary/5 px-1">{item.entityType}</span>
                   </div>
                 </div>
-                <Link 
+                <Link
                   href={`/${item.entityType.toLowerCase()}s/${item.entityId}`}
                   className="shrink-0 text-xs font-mono text-muted-foreground hover:text-primary transition-colors border border-transparent hover:border-primary/20 px-2 py-1"
                 >
