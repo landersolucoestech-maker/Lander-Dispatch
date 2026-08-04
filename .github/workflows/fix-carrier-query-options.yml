@@ -1,0 +1,54 @@
+name: Fix carrier query options
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - .github/workflows/fix-carrier-query-options.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Add generated query keys
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          files = {
+              'apps/web/src/modules/accounting/components/InvoicePDFPreview.tsx': 'd.carrierId ?? ""',
+              'apps/web/src/modules/accounting/components/InvoiceViewModal.tsx': 'carrierId ?? ""',
+              'apps/web/src/modules/accounting/pages/InvoiceDetailPage.tsx': 'carrierId ?? ""',
+          }
+
+          for filename, argument in files.items():
+              path = Path(filename)
+              text = path.read_text()
+              old = 'query: { enabled: !!' + ('d.carrierId' if argument.startswith('d.') else 'carrierId') + ' },'
+              new = (
+                  'query: { enabled: !!'
+                  + ('d.carrierId' if argument.startswith('d.') else 'carrierId')
+                  + ', queryKey: getGetCarrierQueryKey('
+                  + argument
+                  + ') },'
+              )
+              if old not in text:
+                  raise SystemExit(f'Expected query option not found in {filename}')
+              path.write_text(text.replace(old, new, 1))
+          PY
+
+      - name: Commit correction
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/web/src/modules/accounting
+          git commit -m "fix: include generated carrier query keys"
+          git push origin HEAD:dev
