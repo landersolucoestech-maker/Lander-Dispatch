@@ -57,7 +57,8 @@ jobs:
           set -Eeuo pipefail
           if git grep -n -i -E '(@replit/|replit-auth|REPL_ID|REPLIT_DOMAINS|replit\.com/oidc)' -- \
             ':!pnpm-lock.yaml' \
-            ':!README.md'; then
+            ':!README.md' \
+            ':!.github/workflows/dev-validation.yml'; then
             echo 'Replit-specific integration remains in the source tree.' >&2
             exit 1
           fi
