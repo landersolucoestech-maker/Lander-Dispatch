@@ -1,12 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Toaster } from '@/shared/components/ui/toaster';
-import { TooltipProvider } from '@/shared/components/ui/tooltip';
-import NotFound from '@/pages/not-found';
-import { Route, Switch, Router as WouterRouter, Redirect, useLocation } from 'wouter';
+import { Redirect, Route, Router as WouterRouter, Switch } from 'wouter';
 import { useAuth } from '@workspace/auth-web';
-import { Shell } from '@/shared/components/layout/Shell';
 
-// Pages
 import Login from '@/modules/auth/pages/LoginPage';
 import DashboardPage from '@/modules/dashboard/pages/DashboardPage';
 import LoadsListPage from '@/modules/loads/pages/LoadsListPage';
@@ -28,18 +23,45 @@ import TransactionDetailPage from '@/modules/accounting/pages/TransactionDetailP
 import ProfitLossPage from '@/modules/accounting/pages/ProfitLossPage';
 import ReportsPage from '@/modules/reports/pages/ReportsPage';
 import SettingsPage from '@/modules/settings/pages/SettingsPage';
+import NotFound from '@/pages/not-found';
+import { Shell } from '@/shared/components/layout/Shell';
+import { Toaster } from '@/shared/components/ui/toaster';
+import { TooltipProvider } from '@/shared/components/ui/tooltip';
 
 const queryClient = new QueryClient();
 
 function AppRouter() {
-  const { isAuthenticated, isLoading } = useAuth();
-  useLocation();
+  const { isAuthenticated, isLoading, sessionError } = useAuth();
 
   if (isLoading) {
     return (
-      <div className="min-h-[100dvh] w-full flex items-center justify-center bg-background">
-        <span className="font-mono text-sm text-muted-foreground">INITIALIZING...</span>
+      <div className="flex min-h-[100dvh] w-full items-center justify-center bg-background">
+        <span className="text-sm font-medium text-muted-foreground">
+          Loading Lander Dispatch…
+        </span>
       </div>
+    );
+  }
+
+  if (sessionError) {
+    return (
+      <main className="flex min-h-[100dvh] items-center justify-center bg-slate-50 px-4">
+        <section className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-xl shadow-slate-900/5">
+          <h1 className="text-xl font-semibold text-slate-950">
+            Unable to connect to the API
+          </h1>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            The application could not verify your session. Confirm that the API is running and try again.
+          </p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="mt-6 h-11 w-full rounded-lg bg-blue-700 px-4 text-sm font-semibold text-white transition hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-200"
+          >
+            Try again
+          </button>
+        </section>
+      </main>
     );
   }
 
@@ -80,7 +102,10 @@ function AppRouter() {
         <Route path="/accounting/invoices" component={InvoicesListPage} />
         <Route path="/accounting/invoices/:invoiceId" component={InvoiceDetailPage} />
         <Route path="/accounting/transactions" component={TransactionsListPage} />
-        <Route path="/accounting/transactions/:transactionId" component={TransactionDetailPage} />
+        <Route
+          path="/accounting/transactions/:transactionId"
+          component={TransactionDetailPage}
+        />
         <Route path="/accounting/profit-loss" component={ProfitLossPage} />
 
         <Route path="/reports" component={ReportsPage} />
