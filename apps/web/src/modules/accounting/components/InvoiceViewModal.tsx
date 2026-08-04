@@ -91,7 +91,7 @@ function LinkedLoadRow({ loadId }: { loadId: string }) {
 
 function BillToSection({ carrierId }: { carrierId?: string | null }) {
   const { data: carrier, isLoading } = useGetCarrier(carrierId ?? "", {
-    query: { enabled: !!carrierId },
+    query: { enabled: !!carrierId, queryKey: getGetCarrierQueryKey(carrierId ?? "") },
   });
 
   return (

@@ -90,7 +90,7 @@ export function InvoicePDFPreview({ invoice, onClose }: Props) {
   const d = invoice as any;
 
   const { data: carrier } = useGetCarrier(d.carrierId ?? "", {
-    query: { enabled: !!d.carrierId },
+    query: { enabled: !!d.carrierId, queryKey: getGetCarrierQueryKey(d.carrierId ?? "") },
   });
   const { data: company } = useGetCompanyProfile();
 
