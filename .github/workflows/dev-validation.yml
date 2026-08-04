@@ -17,13 +17,16 @@ concurrency:
 
 jobs:
   validate:
-    name: Install, codegen check, typecheck and build
+    name: Compose, install, codegen, typecheck and build
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
+
+      - name: Validate Docker Compose configuration
+        run: docker compose config >/dev/null
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
