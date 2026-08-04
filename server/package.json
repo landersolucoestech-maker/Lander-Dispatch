@@ -10,6 +10,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@node-rs/argon2": "2.0.2",
     "@types/multer": "^2.2.0",
     "@types/pdf-parse": "^1.1.5",
     "@workspace/api-zod": "workspace:*",
@@ -22,7 +23,8 @@
     "openai": "^6.49.0",
     "pdf-parse": "1.1.1",
     "pino": "^9.14.0",
-    "pino-http": "^10.5.0"
+    "pino-http": "^10.5.0",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.10",
