@@ -8,8 +8,8 @@ This repository was initialized from the latest project archive supplied for dev
 
 - Supabase is intentionally deferred.
 - Development uses the `dev` branch.
-- Validation and release promotion follow `dev` → `staging` → `prod`.
-- No direct changes are permitted in `staging` or `prod`.
+- Validation and release promotion follow `dev` → `staging` → `main`.
+- No direct changes are permitted in `staging` or `main`.
 - Test data must never be inserted outside development.
 
 ## Branch model
@@ -18,9 +18,9 @@ This repository was initialized from the latest project archive supplied for dev
 | --- | --- |
 | `dev` | Active development and integration |
 | `staging` | Controlled validation candidate |
-| `prod` | Production-ready source only |
+| `main` | Production-ready source only |
 
-The three branches start from the same import commit. Future development must begin on `dev`.
+The three branches start from the same import baseline. Future development must begin on `dev`.
 
 ## Current architecture
 
