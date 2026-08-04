@@ -19,10 +19,7 @@
       "path": "../../packages/api-client-react"
     },
     {
-      "path": "../../packages/replit-auth-web"
-    },
-    {
-      "path": "../../lib/object-storage-web"
+      "path": "../../packages/auth-web"
     }
   ]
 }
