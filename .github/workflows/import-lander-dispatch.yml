@@ -1,0 +1,54 @@
+name: Import Lander Dispatch source
+
+on:
+  pull_request:
+    branches:
+      - staging
+    paths:
+      - .bootstrap/IMPORT_READY
+
+permissions:
+  contents: write
+
+jobs:
+  import-source:
+    if: github.event.pull_request.head.ref == 'dev'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout development branch
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 0
+          token: ${{ github.token }}
+
+      - name: Reconstruct and validate source archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .bootstrap/parts/part* | base64 --decode > /tmp/lander-dispatch.tar.xz
+          mkdir -p /tmp/lander-dispatch-import
+          tar -xJf /tmp/lander-dispatch.tar.xz -C /tmp/lander-dispatch-import
+          test -f /tmp/lander-dispatch-import/ld_bootstrap/package.json
+          test -f /tmp/lander-dispatch-import/ld_bootstrap/README.md
+          test -d /tmp/lander-dispatch-import/ld_bootstrap/apps
+          test -d /tmp/lander-dispatch-import/ld_bootstrap/server
+
+      - name: Replace bootstrap files with project source
+        shell: bash
+        run: |
+          set -euo pipefail
+          find . -mindepth 1 -maxdepth 1 \
+            ! -name .git \
+            -exec rm -rf {} +
+          cp -a /tmp/lander-dispatch-import/ld_bootstrap/. .
+
+      - name: Commit imported project to dev
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add --all
+          git commit -m "chore: import Lander Dispatch source"
+          git push origin HEAD:dev
