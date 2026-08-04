@@ -1,14 +1,12 @@
 import type { AuthUser } from '@workspace/api-zod';
 import { type NextFunction, type Request, type Response } from 'express';
-import * as oidc from 'openid-client';
 
 import {
   clearSession,
-  getOidcConfig,
   getSession,
   getSessionId,
-  updateSession,
-  type SessionData,
+  isLocalAuthBypassEnabled,
+  LOCAL_DEVELOPMENT_USER,
 } from '../lib/auth';
 
 declare global {
@@ -17,7 +15,6 @@ declare global {
 
     interface Request {
       isAuthenticated(): this is AuthedRequest;
-
       user?: User | undefined;
     }
 
@@ -27,28 +24,49 @@ declare global {
   }
 }
 
-async function refreshIfExpired(
-  sid: string,
-  session: SessionData,
-): Promise<SessionData | null> {
-  const now = Math.floor(Date.now() / 1000);
-  if (!session.expires_at || now <= session.expires_at) return session;
+function isLoopbackAddress(value: string | undefined): boolean {
+  if (!value) return false;
+  const normalized = value.toLowerCase();
+  return (
+    normalized === '127.0.0.1' ||
+    normalized === '::1' ||
+    normalized === '::ffff:127.0.0.1'
+  );
+}
 
-  if (!session.refresh_token) return null;
+function isLoopbackHost(value: string | undefined): boolean {
+  if (!value) return false;
+  const host = value
+    .trim()
+    .toLowerCase()
+    .replace(/^\[/, '')
+    .replace(/\](:\d+)?$/, '')
+    .replace(/:\d+$/, '');
+  return host === 'localhost' || host === '127.0.0.1' || host === '::1';
+}
 
-  try {
-    const config = await getOidcConfig();
-    const tokens = await oidc.refreshTokenGrant(config, session.refresh_token);
-    session.access_token = tokens.access_token;
-    session.refresh_token = tokens.refresh_token ?? session.refresh_token;
-    session.expires_at = tokens.expiresIn()
-      ? now + tokens.expiresIn()!
-      : session.expires_at;
-    await updateSession(sid, session);
-    return session;
-  } catch {
-    return null;
+function isStrictLocalRequest(req: Request): boolean {
+  const hasForwardedHeaders =
+    req.headers['x-forwarded-for'] !== undefined ||
+    req.headers['x-forwarded-host'] !== undefined ||
+    req.headers['x-forwarded-proto'] !== undefined;
+
+  if (hasForwardedHeaders) return false;
+
+  const origin = req.headers.origin;
+  if (typeof origin === 'string') {
+    try {
+      if (!isLoopbackHost(new URL(origin).hostname)) return false;
+    } catch {
+      return false;
+    }
   }
+
+  return (
+    isLoopbackAddress(req.socket.localAddress) &&
+    isLoopbackAddress(req.socket.remoteAddress) &&
+    isLoopbackHost(req.headers.host)
+  );
 }
 
 export async function authMiddleware(
@@ -60,26 +78,32 @@ export async function authMiddleware(
     return this.user != null;
   } as Request['isAuthenticated'];
 
-  const sid = getSessionId(req);
-  if (!sid) {
+  if (isLocalAuthBypassEnabled()) {
+    if (!isStrictLocalRequest(req)) {
+      res.status(403).json({
+        error: 'Local authentication bypass is restricted to loopback requests.',
+      });
+      return;
+    }
+
+    req.user = LOCAL_DEVELOPMENT_USER;
     next();
     return;
   }
 
-  const session = await getSession(sid);
+  const token = getSessionId(req);
+  if (!token) {
+    next();
+    return;
+  }
+
+  const session = await getSession(token);
   if (!session?.user?.id) {
-    await clearSession(res, sid);
+    await clearSession(res, token);
     next();
     return;
   }
 
-  const refreshed = await refreshIfExpired(sid, session);
-  if (!refreshed) {
-    await clearSession(res, sid);
-    next();
-    return;
-  }
-
-  req.user = refreshed.user;
+  req.user = session.user;
   next();
 }
