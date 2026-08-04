@@ -1,7 +1,6 @@
-import { Algorithm, hash, verify } from '@node-rs/argon2';
+import { hash, verify } from '@node-rs/argon2';
 
-const ARGON2_OPTIONS = {
-  algorithm: Algorithm.Argon2id,
+const ARGON2ID_OPTIONS = {
   memoryCost: 19_456,
   timeCost: 2,
   parallelism: 1,
@@ -9,7 +8,7 @@ const ARGON2_OPTIONS = {
 };
 
 export async function hashPassword(password: string): Promise<string> {
-  return hash(password, ARGON2_OPTIONS);
+  return hash(password, ARGON2ID_OPTIONS);
 }
 
 export async function verifyPassword(
@@ -17,7 +16,7 @@ export async function verifyPassword(
   password: string,
 ): Promise<boolean> {
   try {
-    return await verify(passwordHash, password, ARGON2_OPTIONS);
+    return await verify(passwordHash, password, ARGON2ID_OPTIONS);
   } catch {
     return false;
   }
