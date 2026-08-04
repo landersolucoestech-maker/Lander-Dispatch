@@ -1,0 +1,72 @@
+name: lander-dispatch-dev
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: lander-dispatch-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: lander_dispatch
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - lander_dispatch_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d lander_dispatch"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    networks:
+      - lander_dispatch_local
+
+  minio:
+    image: minio/minio:latest
+    container_name: lander-dispatch-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    volumes:
+      - lander_dispatch_minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    networks:
+      - lander_dispatch_local
+
+  minio-init:
+    image: minio/mc:latest
+    profiles: ["setup"]
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        set -eu
+        mc alias set local http://minio:9000 minioadmin minioadmin
+        mc mb --ignore-existing local/lander-dispatch-private
+        mc mb --ignore-existing local/lander-dispatch-public
+        mc anonymous set none local/lander-dispatch-private
+        mc anonymous set none local/lander-dispatch-public
+    networks:
+      - lander_dispatch_local
+
+volumes:
+  lander_dispatch_postgres_data:
+  lander_dispatch_minio_data:
+
+networks:
+  lander_dispatch_local:
+    driver: bridge
