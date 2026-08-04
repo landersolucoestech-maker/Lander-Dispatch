@@ -73,7 +73,7 @@ export async function authMiddleware(
   req: Request,
   res: Response,
   next: NextFunction,
-) {
+): Promise<void> {
   req.isAuthenticated = function (this: Request) {
     return this.user != null;
   } as Request['isAuthenticated'];
@@ -105,5 +105,18 @@ export async function authMiddleware(
   }
 
   req.user = session.user;
+  next();
+}
+
+export function requireAuthenticated(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): void {
+  if (!req.isAuthenticated()) {
+    res.status(401).json({ error: 'Authentication required.' });
+    return;
+  }
+
   next();
 }
