@@ -10,19 +10,38 @@ const router: IRouter = Router();
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 20 * 1024 * 1024 }, // 20 MB
+  limits: { fileSize: 20 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     if (file.mimetype === "application/pdf") cb(null, true);
     else cb(new Error("Only PDF files are accepted."));
   },
 });
 
-const openai = new OpenAI({
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-});
+function getOpenAIConfiguration(): {
+  apiKey: string;
+  baseURL?: string;
+  model: string;
+} | null {
+  const apiKey = (
+    process.env.AI_INTEGRATIONS_OPENAI_API_KEY ??
+    process.env.OPENAI_API_KEY
+  )?.trim();
+  const model = process.env.OPENAI_PDF_EXTRACTION_MODEL?.trim();
 
-const SYSTEM_PROMPT = `You are a freight dispatch data extraction assistant.
+  if (!apiKey || !model) return null;
+
+  const baseURL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL?.trim();
+  return {
+    apiKey,
+    model,
+    ...(baseURL ? { baseURL } : {}),
+  };
+}
+
+function createSystemPrompt(): string {
+  const currentYear = new Date().getUTCFullYear();
+
+  return `You are a freight dispatch data extraction assistant.
 You will receive text extracted from a trucking document — which may be a:
 - Central Dispatch dispatch sheet / vehicle dispatch order
 - Rate confirmation (rate con)
@@ -82,9 +101,10 @@ Rules:
 - For dispatch_sheet: status = "Dispatched".
 - For rate_confirmation: extract rate, payment terms, reference numbers.
 - For bol: focus on pickup/delivery details and vehicle info.
-- Dates must be YYYY-MM-DD. Month/day without year → use 2026.
+- Dates must be YYYY-MM-DD. Month/day without year → use ${currentYear}.
 - Rate: numeric only, no $ sign. "2,400.00" → 2400.
 - If a field truly cannot be determined, use null — never guess.`;
+}
 
 router.post("/loads/parse-pdf", upload.single("pdf"), async (req, res): Promise<void> => {
   if (!req.file) {
@@ -92,11 +112,19 @@ router.post("/loads/parse-pdf", upload.single("pdf"), async (req, res): Promise<
     return;
   }
 
+  const aiConfiguration = getOpenAIConfiguration();
+  if (!aiConfiguration) {
+    res.status(503).json({
+      error:
+        "AI PDF extraction is not configured. Set OPENAI_API_KEY and OPENAI_PDF_EXTRACTION_MODEL.",
+    });
+    return;
+  }
+
   let extractedText = "";
   try {
-    // pdf-parse v1 API: pdfParse(buffer) → Promise<{ text, numpages, ... }>
     const parsed = await (pdfParse as (buf: Buffer) => Promise<{ text: string; numpages: number }>)(
-      req.file.buffer
+      req.file.buffer,
     );
     extractedText = parsed.text?.trim() ?? "";
   } catch (err: unknown) {
@@ -115,14 +143,18 @@ router.post("/loads/parse-pdf", upload.single("pdf"), async (req, res): Promise<
     return;
   }
 
+  const openai = new OpenAI({
+    apiKey: aiConfiguration.apiKey,
+    ...(aiConfiguration.baseURL ? { baseURL: aiConfiguration.baseURL } : {}),
+  });
   const textForAI = extractedText.slice(0, 8000);
 
   try {
     const completion = await openai.chat.completions.create({
-      model: "gpt-5.6-luna",
+      model: aiConfiguration.model,
       max_completion_tokens: 2048,
       messages: [
-        { role: "system", content: SYSTEM_PROMPT },
+        { role: "system", content: createSystemPrompt() },
         {
           role: "user",
           content: `Extract load data from this document:\n\n---\n${textForAI}\n---`,
@@ -137,14 +169,14 @@ router.post("/loads/parse-pdf", upload.single("pdf"), async (req, res): Promise<
     try {
       extracted = JSON.parse(jsonStr);
     } catch {
-      res.status(422).json({ error: "AI returned unparseable response. Try again.", raw });
+      res.status(422).json({ error: "AI returned unparseable response. Try again." });
       return;
     }
 
     res.json({ extracted, charCount: extractedText.length });
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    res.status(500).json({ error: `AI extraction failed: ${msg}` });
+    req.log.error({ err }, "AI PDF extraction failed");
+    res.status(502).json({ error: "AI extraction failed." });
   }
 });
 
