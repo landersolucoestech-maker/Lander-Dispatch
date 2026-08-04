@@ -1,3 +1,5 @@
+import '@workspace/db/env';
+
 import app from './app';
 import { isLocalAuthBypassEnabled } from './lib/auth';
 import { logger } from './lib/logger';
