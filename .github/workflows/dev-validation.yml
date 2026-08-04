@@ -97,6 +97,14 @@ jobs:
       - name: Apply development database schema
         run: pnpm --filter @workspace/db push-force
 
+      - name: Bootstrap disposable CI owner
+        env:
+          OWNER_EMAIL: ci-owner@localhost.test
+          OWNER_PASSWORD: Ci-Owner-Password-2026
+          OWNER_FIRST_NAME: CI
+          OWNER_LAST_NAME: Owner
+        run: pnpm auth:bootstrap-owner
+
       - name: Start API in loopback bypass mode
         shell: bash
         env:
@@ -162,6 +170,13 @@ jobs:
         env:
           API_BASE_URL: http://127.0.0.1:5000
         run: node ./scripts/ci-auth-required-smoke.mjs
+
+      - name: Verify real owner login and session revocation
+        env:
+          API_BASE_URL: http://127.0.0.1:5000
+          OWNER_EMAIL: ci-owner@localhost.test
+          OWNER_PASSWORD: Ci-Owner-Password-2026
+        run: node ./scripts/ci-first-party-auth-smoke.mjs
 
       - name: Print API log on failure
         if: failure()
