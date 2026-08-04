@@ -3,12 +3,20 @@
   "version": "0.1.0",
   "license": "UNLICENSED",
   "scripts": {
-    "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; case \"$npm_config_user_agent\" in pnpm/*) ;; *) echo \"Use pnpm instead\" >&2; exit 1 ;; esac'",
+    "preinstall": "node ./scripts/enforce-pnpm.mjs",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --if-present run typecheck",
+    "infra:validate": "docker compose config",
+    "infra:up": "docker compose up -d --wait postgres minio && docker compose --profile setup run --rm minio-init",
+    "infra:down": "docker compose down",
+    "infra:ps": "docker compose ps",
+    "infra:logs": "docker compose logs -f postgres minio",
     "db:push": "pnpm --filter @workspace/db push",
-    "auth:bootstrap-owner": "pnpm --filter @workspace/scripts bootstrap-owner"
+    "auth:bootstrap-owner": "pnpm --filter @workspace/scripts bootstrap-owner",
+    "dev:web": "pnpm --filter @workspace/lander-dispatch dev",
+    "dev:api": "pnpm --filter @workspace/api-server dev",
+    "local:setup": "pnpm infra:up && pnpm db:push"
   },
   "private": true,
   "devDependencies": {
