@@ -1,83 +1,87 @@
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 import type { AuthUser } from '@workspace/api-zod';
 import { db, sessionsTable } from '@workspace/db';
 import { eq } from 'drizzle-orm';
 import { type Request, type Response } from 'express';
-import * as client from 'openid-client';
 
-export const ISSUER_URL = process.env.ISSUER_URL ?? 'https://replit.com/oidc';
-export const SESSION_COOKIE = 'sid';
+export const SESSION_COOKIE = 'lander_dispatch_session';
 export const SESSION_TTL = 7 * 24 * 60 * 60 * 1000;
+
+export const LOCAL_DEVELOPMENT_USER: AuthUser = {
+  id: 'local-development-user',
+  email: 'auth-disabled@localhost',
+  firstName: 'Local',
+  lastName: 'Development',
+  profileImageUrl: null,
+};
 
 export interface SessionData {
   user: AuthUser;
-  access_token: string;
-  refresh_token?: string;
-  expires_at?: number;
 }
 
-let oidcConfig: client.Configuration | null = null;
+function hashSessionToken(token: string): string {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
 
-export async function getOidcConfig(): Promise<client.Configuration> {
-  if (!oidcConfig) {
-    oidcConfig = await client.discovery(
-      new URL(ISSUER_URL),
-      process.env.REPL_ID!,
-    );
-  }
-  return oidcConfig;
+export function isLocalAuthBypassEnabled(): boolean {
+  return (
+    process.env.NODE_ENV === 'development' &&
+    process.env.AUTH_DISABLED === 'true'
+  );
+}
+
+export function setSessionCookie(res: Response, token: string): void {
+  res.cookie(SESSION_COOKIE, token, {
+    httpOnly: true,
+    secure: process.env.COOKIE_SECURE === 'true',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: SESSION_TTL,
+  });
 }
 
 export async function createSession(data: SessionData): Promise<string> {
-  const sid = crypto.randomBytes(32).toString('hex');
+  const token = crypto.randomBytes(32).toString('base64url');
+  const tokenHash = hashSessionToken(token);
+
   await db.insert(sessionsTable).values({
-    sid,
+    sid: tokenHash,
     sess: data as unknown as Record<string, unknown>,
     expire: new Date(Date.now() + SESSION_TTL),
   });
-  return sid;
+
+  return token;
 }
 
-export async function getSession(sid: string): Promise<SessionData | null> {
+export async function getSession(token: string): Promise<SessionData | null> {
+  const tokenHash = hashSessionToken(token);
   const [row] = await db
     .select()
     .from(sessionsTable)
-    .where(eq(sessionsTable.sid, sid));
+    .where(eq(sessionsTable.sid, tokenHash));
 
   if (!row || row.expire < new Date()) {
-    if (row) await deleteSession(sid);
+    if (row) await deleteSession(token);
     return null;
   }
 
   return row.sess as unknown as SessionData;
 }
 
-export async function updateSession(
-  sid: string,
-  data: SessionData,
+export async function deleteSession(token: string): Promise<void> {
+  const tokenHash = hashSessionToken(token);
+  await db.delete(sessionsTable).where(eq(sessionsTable.sid, tokenHash));
+}
+
+export async function clearSession(
+  res: Response,
+  token?: string,
 ): Promise<void> {
-  await db
-    .update(sessionsTable)
-    .set({
-      sess: data as unknown as Record<string, unknown>,
-      expire: new Date(Date.now() + SESSION_TTL),
-    })
-    .where(eq(sessionsTable.sid, sid));
-}
-
-export async function deleteSession(sid: string): Promise<void> {
-  await db.delete(sessionsTable).where(eq(sessionsTable.sid, sid));
-}
-
-export async function clearSession(res: Response, sid?: string): Promise<void> {
-  if (sid) await deleteSession(sid);
+  if (token) await deleteSession(token);
   res.clearCookie(SESSION_COOKIE, { path: '/' });
 }
 
 export function getSessionId(req: Request): string | undefined {
-  const authHeader = req.headers['authorization'];
-  if (authHeader?.startsWith('Bearer ')) {
-    return authHeader.slice(7);
-  }
-  return req.cookies?.[SESSION_COOKIE];
+  const value = req.cookies?.[SESSION_COOKIE];
+  return typeof value === 'string' && value.length > 0 ? value : undefined;
 }
