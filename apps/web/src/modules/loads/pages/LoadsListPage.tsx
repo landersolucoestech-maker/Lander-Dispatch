@@ -32,15 +32,7 @@ export default function LoadsListPage() {
     deleteMutation.mutate({ loadId: load.id });
   };
 
-  const { data, isLoading } = useListLoads({
-    query: {
-      search: search || undefined,
-      status: status !== "all" ? status : undefined,
-      page,
-      pageSize: 50,
-      queryKey: ["loads", search, status, page]
-    }
-  });
+  const { data, isLoading } = useListLoads({ search: search || undefined, status: status !== "all" ? status : undefined, page, pageSize: 50 }, { query: { queryKey: ["loads", search, status, page] } });
 
   return (
     <div className="flex-1 flex flex-col gap-6 p-8 overflow-y-auto">

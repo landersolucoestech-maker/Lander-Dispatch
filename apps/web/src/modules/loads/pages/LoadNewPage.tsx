@@ -35,8 +35,8 @@ export default function LoadNewPage() {
   const queryClient = useQueryClient();
   const createLoad = useCreateLoad();
 
-  const { data: carriers } = useListCarriers({ query: { pageSize: 100 } });
-  const { data: brokers } = useListBrokers({ query: { pageSize: 100 } });
+  const { data: carriers } = useListCarriers({ pageSize: 100 });
+  const { data: brokers } = useListBrokers({ pageSize: 100 });
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),

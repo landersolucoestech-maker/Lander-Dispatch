@@ -47,10 +47,10 @@ function R3({ children }: { children: React.ReactNode }) {
 function R2({ children }: { children: React.ReactNode }) {
   return <div className="grid grid-cols-1 gap-4 md:grid-cols-12 mb-4">{children}</div>;
 }
-function C4({ children }: { children: React.ReactNode }) {
+function C4({ children }: { children?: React.ReactNode }) {
   return <div className="md:col-span-4 flex flex-col gap-1.5">{children}</div>;
 }
-function C6({ children }: { children: React.ReactNode }) {
+function C6({ children }: { children?: React.ReactNode }) {
   return <div className="md:col-span-6 flex flex-col gap-1.5">{children}</div>;
 }
 

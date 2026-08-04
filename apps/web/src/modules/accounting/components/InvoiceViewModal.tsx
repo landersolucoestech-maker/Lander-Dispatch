@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Invoice } from "@workspace/api-client-react";
-import { useGetLoad, useGetCarrier, useGetCompanyProfile } from "@workspace/api-client-react";
+import { useGetLoad, useGetCarrier, getGetCarrierQueryKey, useGetCompanyProfile } from "@workspace/api-client-react";
 import {
   Dialog,
   DialogContent,

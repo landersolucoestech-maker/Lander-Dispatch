@@ -5,7 +5,7 @@
  */
 import { useEffect } from "react";
 import type { Invoice } from "@workspace/api-client-react";
-import { useGetLoad, useGetCarrier, useGetCompanyProfile } from "@workspace/api-client-react";
+import { useGetLoad, useGetCarrier, getGetCarrierQueryKey, useGetCompanyProfile } from "@workspace/api-client-react";
 import { Button } from "@/shared/components/ui/button";
 import { formatCurrency } from "@/shared/lib/utils";
 import { buildInvoiceDescription } from "@/shared/lib/invoice-utils";

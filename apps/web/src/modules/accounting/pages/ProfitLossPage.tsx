@@ -9,12 +9,7 @@ import { ArrowUpRight, ArrowDownRight, Target } from "lucide-react";
 export default function ProfitLossPage() {
   const [period, setPeriod] = useState("MTD");
 
-  const { data: pnl, isLoading } = useGetProfitLoss({
-    query: {
-      queryKey: ["pnl", period],
-      period: period
-    }
-  });
+  const { data: pnl, isLoading } = useGetProfitLoss({ period: period }, { query: { queryKey: ["pnl", period] } });
 
   return (
     <div className="flex-1 flex flex-col gap-6 p-8 overflow-y-auto">

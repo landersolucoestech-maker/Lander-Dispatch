@@ -161,9 +161,7 @@ export function InvoiceFormModal({ open, onClose, initialData }: Props) {
 
   const handleCarrierChange = (value: string) => {
     const carrierId = value === "__none__" ? "" : value;
-    const carrier = carriersData?.data.find((c: any) => c.id === carrierId);
-    const driverName = carrier?.driver?.name ?? carrier?.driverName ?? "";
-    setForm((previous) => ({ ...previous, carrierId, driverName }));
+    setForm((previous) => ({ ...previous, carrierId, driverName: "" }));
     setSelectedLoadIds([]);
     setDateFrom("");
     setDateTo("");

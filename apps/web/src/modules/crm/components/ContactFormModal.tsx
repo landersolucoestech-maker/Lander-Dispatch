@@ -260,7 +260,7 @@ function GenericContactForm({ initialData, pendingType, onPendingTypeChange, onC
       coverageArea: config?.showCoverageArea ? prev.coverageArea : "",
       businessHours: config?.showBusinessHours ? prev.businessHours : "",
       emergencyService: config?.showEmergencyService ? prev.emergencyService : false,
-      services: config?.showServices ? prev.services : "",
+      servicesProvided: config?.showServices ? prev.servicesProvided : "",
     }));
   }
 

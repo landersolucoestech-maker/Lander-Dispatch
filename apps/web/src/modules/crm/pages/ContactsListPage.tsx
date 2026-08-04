@@ -27,14 +27,7 @@ export default function ContactsListPage() {
     deleteMutation.mutate({ contactId: contact.id });
   };
 
-  const { data, isLoading } = useListCrmContacts({
-    query: {
-      search: search || undefined,
-      page,
-      pageSize: 50,
-      queryKey: ["contacts", search, page]
-    }
-  });
+  const { data, isLoading } = useListCrmContacts({ search: search || undefined, page, pageSize: 50 }, { query: { queryKey: ["contacts", search, page] } });
 
   return (
     <div className="flex-1 flex flex-col gap-6 p-8 overflow-y-auto">

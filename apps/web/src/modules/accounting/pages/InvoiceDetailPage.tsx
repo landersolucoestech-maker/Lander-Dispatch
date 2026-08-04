@@ -1,4 +1,4 @@
-import { useGetInvoice, useGetLoad, useGetCarrier, useGetCompanyProfile } from "@workspace/api-client-react";
+import { useGetInvoice, useGetLoad, useGetCarrier, getGetCarrierQueryKey, useGetCompanyProfile } from "@workspace/api-client-react";
 import { useParams, Link } from "wouter";
 import { Button } from "@/shared/components/ui/button";
 import { StatusBadge } from "@/shared/components/ui/status-badge";

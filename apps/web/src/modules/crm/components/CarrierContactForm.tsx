@@ -16,7 +16,7 @@ import { Textarea } from "@/shared/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { Badge } from "@/shared/components/ui/badge";
 import { ChevronDown, ChevronUp, Copy, Plus, Trash2, X } from "lucide-react";
-import type { FleetEquipment } from "@workspace/db";
+import type { FleetEquipment } from "../types/fleet-equipment";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 const CARRIER_TYPES = ["Open Trailer", "Enclosed Trailer", "Hotshot", "Flatbed", "Reefer / Refrigerated", "Box Truck", "Lowboy", "Step Deck", "Other"];

@@ -110,8 +110,8 @@ export function CarrierFormModal({ open, onClose, initialData }: Props) {
         factoringFee: initialData.factoringFee?.toString() ?? "",
         bankName: initialData.bankName ?? "",
         accountHolder: initialData.accountHolder ?? "",
-        accountNumber: initialData.accountNumber ?? "",
-        routingNumber: initialData.routingNumber ?? "",
+        accountNumber: "",
+        routingNumber: "",
         bankAddress: initialData.bankAddress ?? "",
         bankCity: initialData.bankCity ?? "",
         bankState: initialData.bankState ?? "",
@@ -220,8 +220,8 @@ export function CarrierFormModal({ open, onClose, initialData }: Props) {
     }
   };
 
-  const { data: contactsData } = useListCrmContacts({ query: { pageSize: 200 } as any });
-  const contacts = contactsData?.contacts ?? [];
+  const { data: contactsData } = useListCrmContacts({ pageSize: 200 });
+  const contacts = contactsData?.data ?? [];
 
   const isPending = createMutation.isPending || updateMutation.isPending;
 

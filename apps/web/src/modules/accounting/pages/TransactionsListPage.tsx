@@ -34,16 +34,7 @@ export default function TransactionsListPage() {
 
   const { data: kpis, isLoading: isKpisLoading } = useGetTransactionKpis();
 
-  const { data, isLoading } = useListTransactions({
-    query: {
-      search: search || undefined,
-      type: type !== "all" ? type : undefined,
-      status: status !== "all" ? status : undefined,
-      page,
-      pageSize: 50,
-      queryKey: ["transactions", search, type, status, page]
-    }
-  });
+  const { data, isLoading } = useListTransactions({ search: search || undefined, type: type !== "all" ? type : undefined, status: status !== "all" ? status : undefined, page, pageSize: 50 }, { query: { queryKey: ["transactions", search, type, status, page] } });
 
   return (
     <div className="flex-1 flex flex-col gap-6 p-8 overflow-y-auto">

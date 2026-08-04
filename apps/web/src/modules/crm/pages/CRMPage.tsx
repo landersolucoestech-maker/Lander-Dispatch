@@ -60,14 +60,11 @@ export default function CRMPage() {
   const [editContact, setEditContact] = useState<any | null>(null);
   const [editDriver, setEditDriver] = useState<Driver | null>(null);
 
-  const { data: contactsData, isLoading: contactsLoading } = useListCrmContacts({
-    query: { pageSize: 200 } as any,
+  const { data: contactsData, isLoading: contactsLoading } = useListCrmContacts({ search:  { pageSize: 200 } as any,
   });
-  const { data: carriersData, isLoading: carriersLoading } = useListCarriers({
-    query: { pageSize: 200 } as any,
+  const { data: carriersData, isLoading: carriersLoading } = useListCarriers({ search:  { pageSize: 200 } as any,
   });
-  const { data: brokersData, isLoading: brokersLoading } = useListBrokers({
-    query: { pageSize: 200 } as any,
+  const { data: brokersData, isLoading: brokersLoading } = useListBrokers({ search:  { pageSize: 200 } as any,
   });
   const { data: driversData, isLoading: driversLoading } = useListDrivers({ pageSize: 200 });
 
@@ -155,8 +152,7 @@ export default function CRMPage() {
   const [viewLead, setViewLead] = useState<CrmLead | null>(null);
   const [editLead, setEditLead] = useState<CrmLead | null>(null);
 
-  const { data: leadsData, isLoading: leadsLoading } = useListCrmLeads({
-    query: {
+  const { data: leadsData, isLoading: leadsLoading } = useListCrmLeads({ search:  {
       search: leadSearch || undefined,
       status: leadStatus !== "all" ? leadStatus : undefined,
       page: leadPage,
