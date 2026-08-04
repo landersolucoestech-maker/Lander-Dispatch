@@ -6,6 +6,8 @@ on:
       - staging
     paths:
       - .bootstrap/IMPORT_READY
+      - .bootstrap/IMPORT_READY_V2
+      - .bootstrap/parts/**
 
 permissions:
   contents: write
@@ -26,9 +28,27 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cat .bootstrap/parts/part* | base64 --decode > /tmp/lander-dispatch.tar.xz
+          archive=/tmp/lander-dispatch.tar.xz
+          rm -f "$archive"
+          touch "$archive"
+
+          # Decode each staged part independently in deterministic filename order.
+          for part in .bootstrap/parts/part*; do
+            base64 --decode "$part" >> "$archive"
+          done
+
+          # Compatibility fallback when the files are slices of one Base64 stream.
+          if ! xz --test "$archive"; then
+            cat .bootstrap/parts/part* \
+              | LC_ALL=C tr -cd 'A-Za-z0-9+/=' \
+              | base64 --decode \
+              > "$archive"
+          fi
+
+          test -s "$archive"
+          xz --test "$archive"
           mkdir -p /tmp/lander-dispatch-import
-          tar -xJf /tmp/lander-dispatch.tar.xz -C /tmp/lander-dispatch-import
+          tar -xJf "$archive" -C /tmp/lander-dispatch-import
           test -f /tmp/lander-dispatch-import/ld_bootstrap/package.json
           test -f /tmp/lander-dispatch-import/ld_bootstrap/README.md
           test -d /tmp/lander-dispatch-import/ld_bootstrap/apps
@@ -50,5 +70,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add --all
+          git diff --cached --stat
           git commit -m "chore: import Lander Dispatch source"
           git push origin HEAD:dev
