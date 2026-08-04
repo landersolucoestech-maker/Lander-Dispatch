@@ -1,17 +1,9 @@
+import type { AlertItem } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/shared/components/ui/card";
 import { Link } from "wouter";
 
-interface Alert {
-  id: number;
-  priority: string;
-  description: string;
-  dueDate?: string;
-  relatedEntityType: string;
-  relatedEntityId: number;
-}
-
 interface AlertsBoxProps {
-  alerts?: Alert[];
+  alerts?: AlertItem[];
   isLoading: boolean;
 }
 
