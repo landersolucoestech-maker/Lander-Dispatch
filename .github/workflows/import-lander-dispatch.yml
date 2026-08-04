@@ -30,23 +30,47 @@ jobs:
           set -euo pipefail
           archive=/tmp/lander-dispatch.tar.xz
           rm -f "$archive"
-          touch "$archive"
 
-          # Decode each staged part independently in deterministic filename order.
+          echo "Bootstrap parts:"
           for part in .bootstrap/parts/part*; do
-            base64 --decode "$part" >> "$archive"
+            printf '%s %s bytes\n' "$part" "$(wc -c < "$part")"
           done
 
-          # Compatibility fallback when the files are slices of one Base64 stream.
-          if ! xz --test "$archive"; then
-            cat .bootstrap/parts/part* \
-              | LC_ALL=C tr -cd 'A-Za-z0-9+/=' \
-              | base64 --decode \
-              > "$archive"
+          decode_independent_parts() {
+            : > "$archive"
+            for part in .bootstrap/parts/part*; do
+              clean="$(mktemp)"
+              LC_ALL=C tr -cd 'A-Za-z0-9+/' < "$part" > "$clean"
+              remainder=$(( $(wc -c < "$clean") % 4 ))
+              if [ "$remainder" -ne 0 ]; then
+                printf '%*s' $((4 - remainder)) '' | tr ' ' '=' >> "$clean"
+              fi
+              base64 --decode "$clean" >> "$archive"
+              rm -f "$clean"
+            done
+          }
+
+          decode_single_stream() {
+            stream="$(mktemp)"
+            cat .bootstrap/parts/part* | LC_ALL=C tr -cd 'A-Za-z0-9+/' > "$stream"
+            remainder=$(( $(wc -c < "$stream") % 4 ))
+            if [ "$remainder" -ne 0 ]; then
+              printf '%*s' $((4 - remainder)) '' | tr ' ' '=' >> "$stream"
+            fi
+            base64 --decode "$stream" > "$archive"
+            rm -f "$stream"
+          }
+
+          if decode_independent_parts && xz --test "$archive"; then
+            echo "Archive reconstructed from independently encoded parts."
+          else
+            echo "Independent-part decoding did not produce a valid XZ archive; trying one continuous Base64 stream."
+            decode_single_stream
+            xz --test "$archive"
+            echo "Archive reconstructed from one continuous Base64 stream."
           fi
 
           test -s "$archive"
-          xz --test "$archive"
           mkdir -p /tmp/lander-dispatch-import
           tar -xJf "$archive" -C /tmp/lander-dispatch-import
           test -f /tmp/lander-dispatch-import/ld_bootstrap/package.json
