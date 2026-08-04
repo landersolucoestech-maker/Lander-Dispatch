@@ -3,31 +3,13 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 
-import runtimeErrorOverlay from '@replit/vite-plugin-runtime-error-modal';
-
 const port = Number(process.env.PORT ?? 3000);
+const apiUrl = process.env.VITE_API_URL ?? 'http://127.0.0.1:5000';
 const basePath = process.env.BASE_PATH ?? '/';
 
 export default defineConfig({
   base: basePath,
-  plugins: [
-    react(),
-    tailwindcss(),
-    runtimeErrorOverlay(),
-    ...(process.env.NODE_ENV !== 'production' &&
-    process.env.REPL_ID !== undefined
-      ? [
-          await import('@replit/vite-plugin-cartographer').then((m) =>
-            m.cartographer({
-              root: path.resolve(import.meta.dirname, '..'),
-            }),
-          ),
-          await import('@replit/vite-plugin-dev-banner').then((m) =>
-            m.devBanner(),
-          ),
-        ]
-      : []),
-  ],
+  plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
       '@': path.resolve(import.meta.dirname, 'src'),
@@ -48,12 +30,12 @@ export default defineConfig({
   server: {
     port,
     strictPort: true,
-    host: '0.0.0.0',
-    allowedHosts: true,
+    host: '127.0.0.1',
+    allowedHosts: ['127.0.0.1', 'localhost'],
     proxy: {
       '/api': {
-        target: 'http://localhost:8080',
-        changeOrigin: true,
+        target: apiUrl,
+        changeOrigin: false,
       },
     },
     fs: {
@@ -62,7 +44,7 @@ export default defineConfig({
   },
   preview: {
     port,
-    host: '0.0.0.0',
-    allowedHosts: true,
+    host: '127.0.0.1',
+    allowedHosts: ['127.0.0.1', 'localhost'],
   },
 });
