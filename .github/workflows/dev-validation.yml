@@ -103,7 +103,8 @@ jobs:
           AUTH_DISABLED: "true"
         run: |
           set -Eeuo pipefail
-          nohup pnpm --filter @workspace/api-server start > /tmp/lander-dispatch-api.log 2>&1 &
+          : > /tmp/lander-dispatch-api.log
+          nohup node --enable-source-maps ./server/dist/index.mjs > /tmp/lander-dispatch-api.log 2>&1 &
           echo $! > /tmp/lander-dispatch-api.pid
 
           for attempt in $(seq 1 30); do
@@ -127,18 +128,24 @@ jobs:
           AUTH_DISABLED: "false"
         run: |
           set -Eeuo pipefail
-          kill "$(cat /tmp/lander-dispatch-api.pid)" 2>/dev/null || true
+          API_PID="$(cat /tmp/lander-dispatch-api.pid)"
+          kill "$API_PID"
+          wait "$API_PID" 2>/dev/null || true
           rm -f /tmp/lander-dispatch-api.pid
 
-          for attempt in $(seq 1 20); do
-            if ! curl --silent http://127.0.0.1:5000/api/healthz >/dev/null 2>&1; then
+          for attempt in $(seq 1 30); do
+            if ! curl --silent --max-time 1 http://127.0.0.1:5000/api/healthz >/dev/null 2>&1; then
               break
+            fi
+            if [ "$attempt" -eq 30 ]; then
+              echo "The bypass API process did not release port 5000." >&2
+              exit 1
             fi
             sleep 0.5
           done
 
           : > /tmp/lander-dispatch-api.log
-          nohup pnpm --filter @workspace/api-server start > /tmp/lander-dispatch-api.log 2>&1 &
+          nohup node --enable-source-maps ./server/dist/index.mjs > /tmp/lander-dispatch-api.log 2>&1 &
           echo $! > /tmp/lander-dispatch-api.pid
 
           for attempt in $(seq 1 30); do
