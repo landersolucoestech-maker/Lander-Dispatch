@@ -29,40 +29,130 @@ There is no separate `prod` branch.
 - React and Vite web application
 - Express API
 - PostgreSQL with Drizzle ORM
+- S3-compatible object storage with local MinIO
 - OpenAPI contract with generated React Query and Zod clients
 - First-party authentication with Argon2id password hashes
 - Database-backed sessions with hashed session tokens and HttpOnly cookies
+- AES-256-GCM encryption for carrier banking fields
 - Loopback-only development authentication bypass
+
+## Prerequisites
+
+- Node.js 22
+- pnpm 10
+- Docker Desktop with Docker Compose v2
 
 ## Local environment
 
-Create the local environment file:
+Create the local environment file.
+
+PowerShell:
+
+```powershell
+Copy-Item .env.example .env.local
+```
+
+Bash:
 
 ```bash
 cp .env.example .env.local
 ```
 
-The supplied database URL targets local PostgreSQL on port `55432`. Supabase must not be added until explicitly requested.
+The application automatically loads `.env` and then `.env.local` from the repository root. Environment variables supplied by the operating system remain authoritative.
 
-Install dependencies:
+Before storing carrier banking data, generate a dedicated encryption key and place it in `BANK_DATA_ENCRYPTION_KEY` inside `.env.local`:
+
+```bash
+openssl rand -base64 32
+```
+
+Never commit that key.
+
+## Install dependencies
 
 ```bash
 pnpm install --frozen-lockfile
 ```
 
-Apply the development database schema:
+## Start local infrastructure
+
+The local Compose stack binds every published service to `127.0.0.1`:
+
+- PostgreSQL: `127.0.0.1:55432`
+- MinIO API: `127.0.0.1:9000`
+- MinIO console: `127.0.0.1:9001`
+
+Start PostgreSQL and MinIO, wait for health checks, and create the private buckets:
 
 ```bash
+pnpm infra:up
+```
+
+Inspect services:
+
+```bash
+pnpm infra:ps
+```
+
+Follow logs:
+
+```bash
+pnpm infra:logs
+```
+
+Stop services without deleting development volumes:
+
+```bash
+pnpm infra:down
+```
+
+## Initialize the development database
+
+Start infrastructure and apply the current Drizzle schema:
+
+```bash
+pnpm local:setup
+```
+
+The equivalent explicit commands are:
+
+```bash
+pnpm infra:up
 pnpm db:push
 ```
 
-Create or update the only owner account by setting `OWNER_EMAIL`, `OWNER_PASSWORD`, `OWNER_FIRST_NAME`, and `OWNER_LAST_NAME` in `.env.local`, then running:
+## Create the owner account
+
+Set these values in `.env.local`:
+
+```env
+OWNER_EMAIL=owner@example.com
+OWNER_PASSWORD=replace-with-a-long-private-password
+OWNER_FIRST_NAME=Owner
+OWNER_LAST_NAME=Name
+```
+
+Then run:
 
 ```bash
 pnpm auth:bootstrap-owner
 ```
 
-Passwords must contain at least 12 characters. The command never prints or stores the plain-text password.
+Passwords must contain at least 12 characters. The bootstrap command stores only an Argon2id password hash and never prints the plain-text password.
+
+## Start the application
+
+Terminal 1 — API on `http://127.0.0.1:5000`:
+
+```bash
+pnpm dev:api
+```
+
+Terminal 2 — frontend on `http://127.0.0.1:3000`:
+
+```bash
+pnpm dev:web
+```
 
 ## Authentication modes
 
@@ -80,9 +170,10 @@ The API rejects bypass use on non-loopback binds and rejects forwarded or remote
 
 ## Validation
 
-The `dev` workflow is immutable and runs:
+The immutable `dev` workflow runs:
 
 ```text
+Docker Compose configuration validation
 pnpm install --frozen-lockfile
 OpenAPI client generation and synchronization check
 Replit integration absence check
@@ -90,9 +181,17 @@ pnpm typecheck
 pnpm build
 ```
 
+Run the main checks locally:
+
+```bash
+pnpm infra:validate
+pnpm typecheck
+pnpm build
+```
+
 ## Important development rules
 
-- Never commit `.env.local` or credentials.
+- Never commit `.env.local`, encryption keys, passwords, access keys, or database credentials.
 - Never edit generated API clients manually.
 - Change OpenAPI first, then regenerate clients.
 - Never run destructive database operations without an isolated development database.
@@ -113,4 +212,4 @@ The interface direction uses Poppins for headings, Inter for body text, a navy a
 
 ## Remaining development work
 
-The repository is now independent of Replit. Remaining work includes the full product refactor, final visual system, complete module validation, local container orchestration, S3-compatible storage hardening, automated tests, security review, and staged release validation.
+The repository is independent of Replit and has a reproducible local infrastructure baseline. Remaining work includes the final visual system, module-by-module product refactor, automated API and browser tests, accessibility validation, security review, and staged release validation.
