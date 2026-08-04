@@ -1,14 +1,36 @@
-import { Readable } from 'stream';
-import {
-  RequestUploadUrlBody,
-  RequestUploadUrlResponse,
-} from '@workspace/api-zod';
 import { Router, type IRouter, type Request, type Response } from 'express';
+import { Readable } from 'node:stream';
 
 import {
   ObjectNotFoundError,
   ObjectStorageService,
 } from '../lib/objectStorage';
+
+interface UploadUrlRequest {
+  name: string;
+  size: number;
+  contentType: string;
+}
+
+function parseUploadUrlRequest(value: unknown): UploadUrlRequest | null {
+  if (typeof value !== 'object' || value === null) return null;
+
+  const candidate = value as Record<string, unknown>;
+  const name = typeof candidate.name === 'string' ? candidate.name.trim() : '';
+  const contentType =
+    typeof candidate.contentType === 'string' ? candidate.contentType.trim() : '';
+  const size = candidate.size;
+
+  if (!name || !contentType || !Number.isInteger(size) || Number(size) <= 0) {
+    return null;
+  }
+
+  return {
+    name,
+    contentType,
+    size: Number(size),
+  };
+}
 
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
@@ -20,24 +42,22 @@ const objectStorageService = new ObjectStorageService();
 router.post(
   '/storage/uploads/request-url',
   async (req: Request, res: Response) => {
-    const parsed = RequestUploadUrlBody.safeParse(req.body);
-    if (!parsed.success) {
+    const uploadRequest = parseUploadUrlRequest(req.body);
+    if (!uploadRequest) {
       res.status(400).json({ error: 'Missing or invalid required fields' });
       return;
     }
 
     try {
-      const { name, size, contentType } = parsed.data;
+      const { name, size, contentType } = uploadRequest;
       const uploadURL = await objectStorageService.getObjectEntityUploadURL();
       const objectPath = objectStorageService.normalizeObjectEntityPath(uploadURL);
 
-      res.json(
-        RequestUploadUrlResponse.parse({
-          uploadURL,
-          objectPath,
-          metadata: { name, size, contentType },
-        }),
-      );
+      res.json({
+        uploadURL,
+        objectPath,
+        metadata: { name, size, contentType },
+      });
     } catch (error) {
       req.log.error({ err: error }, 'Error generating upload URL');
       res.status(500).json({ error: 'Failed to generate upload URL' });
