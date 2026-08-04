@@ -1,4 +1,4 @@
-import { Algorithm, hash } from '@node-rs/argon2';
+import { hash } from '@node-rs/argon2';
 import { db, pool, usersTable } from '@workspace/db';
 import { and, eq, ne } from 'drizzle-orm';
 
@@ -16,7 +16,6 @@ if (!password || password.length < 12) {
 }
 
 const passwordHash = await hash(password, {
-  algorithm: Algorithm.Argon2id,
   memoryCost: 19_456,
   timeCost: 2,
   parallelism: 1,
@@ -27,12 +26,7 @@ try {
   const [conflictingOwner] = await db
     .select({ id: usersTable.id, email: usersTable.email })
     .from(usersTable)
-    .where(
-      and(
-        eq(usersTable.role, 'owner'),
-        ne(usersTable.email, email),
-      ),
-    )
+    .where(and(eq(usersTable.role, 'owner'), ne(usersTable.email, email)))
     .limit(1);
 
   if (conflictingOwner) {
