@@ -1,11 +1,13 @@
-import { formatCurrency } from "@/shared/lib/utils";
-import { useGetDashboardKpis, useGetDashboardActivity, useGetDashboardAlerts } from "@workspace/api-client-react";
-import { Link } from "wouter";
-import { formatDateTime } from "@/shared/lib/utils";
-import { KpiCard } from "@/modules/dashboard/components/KpiCard";
 import { ActivityFeed } from "@/modules/dashboard/components/ActivityFeed";
 import { AlertsBox } from "@/modules/dashboard/components/AlertsBox";
-import { Truck, Users, CheckCircle2, TrendingUp, Clock, Bell } from "lucide-react";
+import { KpiCard } from "@/modules/dashboard/components/KpiCard";
+import { formatCurrency } from "@/shared/lib/utils";
+import {
+  useGetDashboardActivity,
+  useGetDashboardAlerts,
+  useGetDashboardKpis,
+} from "@workspace/api-client-react";
+import { Bell, CheckCircle2, Clock, TrendingUp, Truck, Users } from "lucide-react";
 
 export default function DashboardPage() {
   const { data: kpis, isLoading: isKpisLoading } = useGetDashboardKpis();
@@ -13,65 +15,63 @@ export default function DashboardPage() {
   const { data: alerts, isLoading: isAlertsLoading } = useGetDashboardAlerts();
 
   return (
-    <div className="flex-1 flex flex-col gap-6 p-8 overflow-y-auto">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight uppercase">Command Center</h1>
-          <p className="text-sm font-mono text-muted-foreground">Overview & Activity</p>
-        </div>
-        <div className="flex items-center gap-4 text-xs font-mono text-muted-foreground bg-card border border-border px-3 py-1.5">
-          <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-primary animate-pulse" /> SYSTEM.ONLINE</span>
-          <span className="border-l border-border pl-4">{formatDateTime(new Date().toISOString())}</span>
-        </div>
-      </div>
+    <main className="flex min-w-0 flex-1 flex-col gap-6 overflow-y-auto p-4 sm:p-6 lg:p-8">
+      <header className="flex flex-col gap-1">
+        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">DASHBOARD</h1>
+        <p className="text-sm text-muted-foreground">
+          Overview of your dispatch operation and recent activity.
+        </p>
+      </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard 
-          title="Active Carriers" 
-          value={kpis?.activeCarriers} 
-          icon={Truck} 
+      <section
+        aria-label="Dashboard key performance indicators"
+        className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"
+      >
+        <KpiCard
+          title="Active Carriers"
+          value={kpis?.activeCarriers}
+          icon={Truck}
           loading={isKpisLoading}
-          trend="+2 this week"
         />
-        <KpiCard 
-          title="Inactive Carriers" 
-          value={kpis?.inactiveCarriers} 
-          icon={Users} 
+        <KpiCard
+          title="Inactive Carriers"
+          value={kpis?.inactiveCarriers}
+          icon={Users}
           loading={isKpisLoading}
           variant="muted"
         />
-        <KpiCard 
-          title="Loads Booked" 
-          value={kpis?.loadsBooked} 
-          icon={CheckCircle2} 
+        <KpiCard
+          title="Loads Booked"
+          value={kpis?.loadsBooked}
+          icon={CheckCircle2}
           loading={isKpisLoading}
-          trend="MTD"
         />
-        <KpiCard 
-          title="Monthly Rev" 
-          value={kpis?.monthlyRevenue != null ? formatCurrency(kpis.monthlyRevenue) : null} 
-          icon={TrendingUp} 
+        <KpiCard
+          title="Monthly Revenue"
+          value={kpis?.monthlyRevenue != null ? formatCurrency(kpis.monthlyRevenue) : null}
+          icon={TrendingUp}
           loading={isKpisLoading}
-          trend="+$1.2k vs last mo"
           variant="primary"
         />
-      </div>
+      </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-4">
-          <h2 className="text-sm font-mono uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-            <Clock className="w-4 h-4" /> Recent Activity
+      <section className="grid min-w-0 grid-cols-1 gap-6 xl:grid-cols-3">
+        <div className="min-w-0 space-y-4 xl:col-span-2">
+          <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            <Clock className="h-4 w-4" aria-hidden="true" />
+            Recent Activity
           </h2>
           <ActivityFeed activity={activity} isLoading={isActivityLoading} />
         </div>
 
-        <div className="space-y-4">
-          <h2 className="text-sm font-mono uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-            <Bell className="w-4 h-4" /> System Alerts
+        <div className="min-w-0 space-y-4">
+          <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            <Bell className="h-4 w-4" aria-hidden="true" />
+            System Alerts
           </h2>
           <AlertsBox alerts={alerts} isLoading={isAlertsLoading} />
         </div>
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }
