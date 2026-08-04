@@ -1,23 +1,26 @@
 import { Router, type IRouter } from "express";
-import storageRouter from "./storage";
-import healthRouter from "./health";
+
+import { requireAuthenticated } from "../middlewares/authMiddleware";
+import accountingRouter from "./accounting";
 import authRouter from "./auth";
-import dashboardRouter from "./dashboard";
-import carriersRouter from "./carriers";
 import brokersRouter from "./brokers";
+import carriersRouter from "./carriers";
+import crmDriversRouter from "./crm-drivers";
+import crmRouter from "./crm";
+import dashboardRouter from "./dashboard";
+import healthRouter from "./health";
+import invoicesRouter from "./invoices";
 import loadsRouter from "./loads";
 import pdfImportRouter from "./pdf-import";
-import crmRouter from "./crm";
-import crmDriversRouter from "./crm-drivers";
-import invoicesRouter from "./invoices";
-import transactionsRouter from "./transactions";
-import accountingRouter from "./accounting";
 import settingsRouter from "./settings";
+import storageRouter from "./storage";
+import transactionsRouter from "./transactions";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use(authRouter);
+router.use(requireAuthenticated);
 router.use(dashboardRouter);
 router.use(carriersRouter);
 router.use(brokersRouter);
