@@ -29,4 +29,20 @@ export interface LoadUpdate {
   dispatchInstructions?: string;
   pickupInstructions?: string;
   deliveryInstructions?: string;
+  pickupName?: string;
+  pickupAddress?: string;
+  pickupPhone?: string;
+  pickupContactName?: string;
+  pickupEmail?: string;
+  deliveryName?: string;
+  deliveryAddress?: string;
+  deliveryPhone?: string;
+  deliveryContactName?: string;
+  deliveryEmail?: string;
+  carrierPay?: number;
+  fuelSurcharge?: number;
+  freightType?: string;
+  equipmentType?: string;
+  weight?: number;
+  paymentStatus?: string;
 }

@@ -5,6 +5,7 @@
  * Lander Dispatch API
  * OpenAPI spec version: 0.1.0
  */
+import type { CrmContactFleetEquipmentItem } from './crmContactFleetEquipmentItem';
 
 export interface CrmContact {
   id: string;
@@ -48,4 +49,95 @@ export interface CrmContact {
   /** @nullable */
   notes?: string | null;
   createdAt: Date;
+  /** @nullable */
+  primaryContactName?: string | null;
+  /** @nullable */
+  primaryPhoneNumber?: string | null;
+  /** @nullable */
+  primaryPhoneNumber2?: string | null;
+  /** @nullable */
+  emergencyContactName?: string | null;
+  /** @nullable */
+  emergencyPhoneNumber?: string | null;
+  /** @nullable */
+  emergencyPhoneNumber2?: string | null;
+  /** @nullable */
+  brokerType?: string | null;
+  /** @nullable */
+  mcNumber?: string | null;
+  /** @nullable */
+  usdotNumber?: string | null;
+  /** @nullable */
+  coverage?: string | null;
+  freightTypes?: string[];
+  coverageStates?: string[];
+  /** @nullable */
+  paymentTerms?: string | null;
+  /** @nullable */
+  paymentDays?: number | null;
+  /** @nullable */
+  quickPay?: boolean | null;
+  /** @nullable */
+  quickPayFee?: number | null;
+  /** @nullable */
+  factoringAccepted?: string | null;
+  /** @nullable */
+  factoringConditions?: string | null;
+  /** @nullable */
+  onboardingStatus?: string | null;
+  /** @nullable */
+  carrierType?: string | null;
+  /** @nullable */
+  einNumber?: string | null;
+  /** @nullable */
+  authorityStatus?: string | null;
+  /** @nullable */
+  insuranceExpiration?: Date | null;
+  /** @nullable */
+  ratePerMile?: number | null;
+  /** @nullable */
+  companyAddress?: string | null;
+  /** @nullable */
+  companyCity?: string | null;
+  /** @nullable */
+  companyState?: string | null;
+  /** @nullable */
+  companyZipCode?: string | null;
+  /** @nullable */
+  factoringCompany?: string | null;
+  /** @nullable */
+  factoringFee?: number | null;
+  /** @nullable */
+  bankName?: string | null;
+  /** @nullable */
+  accountHolder?: string | null;
+  /** @nullable */
+  accountNumber?: string | null;
+  /** @nullable */
+  routingNumber?: string | null;
+  /** @nullable */
+  bankAddress?: string | null;
+  /** @nullable */
+  bankCity?: string | null;
+  /** @nullable */
+  bankState?: string | null;
+  /** @nullable */
+  bankZipCode?: string | null;
+  /** @nullable */
+  zelleAccount?: string | null;
+  /** @nullable */
+  cashAppAccount?: string | null;
+  operatingStates?: string[];
+  /** @nullable */
+  areaOfOperation?: string | null;
+  serviceTypes?: string[];
+  /** @nullable */
+  weeklyMinimumAmount?: number | null;
+  /** @nullable */
+  totalTripsPerWeek?: number | null;
+  /** @nullable */
+  lastLoad?: Date | null;
+  fleetEquipment?: CrmContactFleetEquipmentItem[];
+  /** @nullable */
+  updatedAt?: Date | null;
 }

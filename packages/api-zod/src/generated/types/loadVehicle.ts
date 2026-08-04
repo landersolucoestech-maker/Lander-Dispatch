@@ -26,4 +26,6 @@ export interface LoadVehicle {
   lotNumber?: string | null;
   /** @nullable */
   additionalInfo?: string | null;
+  /** @nullable */
+  buyerNumber?: string | null;
 }

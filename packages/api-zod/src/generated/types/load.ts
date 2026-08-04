@@ -59,4 +59,36 @@ export interface Load {
   createdAt: Date;
   /** @nullable */
   updatedAt?: Date | null;
+  /** @nullable */
+  pickupName?: string | null;
+  /** @nullable */
+  pickupAddress?: string | null;
+  /** @nullable */
+  pickupPhone?: string | null;
+  /** @nullable */
+  pickupContactName?: string | null;
+  /** @nullable */
+  pickupEmail?: string | null;
+  /** @nullable */
+  deliveryName?: string | null;
+  /** @nullable */
+  deliveryAddress?: string | null;
+  /** @nullable */
+  deliveryPhone?: string | null;
+  /** @nullable */
+  deliveryContactName?: string | null;
+  /** @nullable */
+  deliveryEmail?: string | null;
+  /** @nullable */
+  carrierPay?: number | null;
+  /** @nullable */
+  fuelSurcharge?: number | null;
+  /** @nullable */
+  freightType?: string | null;
+  /** @nullable */
+  equipmentType?: string | null;
+  /** @nullable */
+  weight?: number | null;
+  /** @nullable */
+  paymentStatus?: string | null;
 }

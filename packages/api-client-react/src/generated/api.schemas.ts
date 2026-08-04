@@ -140,6 +140,10 @@ export interface Carrier {
   createdAt: string;
   /** @nullable */
   updatedAt?: string | null;
+  /** @nullable */
+  bankAddress?: string | null;
+  /** @nullable */
+  bankZip?: string | null;
 }
 
 export interface CarrierInput {
@@ -374,6 +378,8 @@ export interface LoadVehicle {
   lotNumber?: string | null;
   /** @nullable */
   additionalInfo?: string | null;
+  /** @nullable */
+  buyerNumber?: string | null;
 }
 
 export interface Load {
@@ -428,6 +434,38 @@ export interface Load {
   createdAt: string;
   /** @nullable */
   updatedAt?: string | null;
+  /** @nullable */
+  pickupName?: string | null;
+  /** @nullable */
+  pickupAddress?: string | null;
+  /** @nullable */
+  pickupPhone?: string | null;
+  /** @nullable */
+  pickupContactName?: string | null;
+  /** @nullable */
+  pickupEmail?: string | null;
+  /** @nullable */
+  deliveryName?: string | null;
+  /** @nullable */
+  deliveryAddress?: string | null;
+  /** @nullable */
+  deliveryPhone?: string | null;
+  /** @nullable */
+  deliveryContactName?: string | null;
+  /** @nullable */
+  deliveryEmail?: string | null;
+  /** @nullable */
+  carrierPay?: number | null;
+  /** @nullable */
+  fuelSurcharge?: number | null;
+  /** @nullable */
+  freightType?: string | null;
+  /** @nullable */
+  equipmentType?: string | null;
+  /** @nullable */
+  weight?: number | null;
+  /** @nullable */
+  paymentStatus?: string | null;
 }
 
 export interface LoadInput {
@@ -452,6 +490,23 @@ export interface LoadInput {
   dispatchInstructions?: string;
   pickupInstructions?: string;
   deliveryInstructions?: string;
+  loadId?: string;
+  pickupName?: string;
+  pickupAddress?: string;
+  pickupPhone?: string;
+  pickupContactName?: string;
+  pickupEmail?: string;
+  deliveryName?: string;
+  deliveryAddress?: string;
+  deliveryPhone?: string;
+  deliveryContactName?: string;
+  deliveryEmail?: string;
+  carrierPay?: number;
+  fuelSurcharge?: number;
+  freightType?: string;
+  equipmentType?: string;
+  weight?: number;
+  paymentStatus?: string;
 }
 
 export interface LoadUpdate {
@@ -476,12 +531,30 @@ export interface LoadUpdate {
   dispatchInstructions?: string;
   pickupInstructions?: string;
   deliveryInstructions?: string;
+  pickupName?: string;
+  pickupAddress?: string;
+  pickupPhone?: string;
+  pickupContactName?: string;
+  pickupEmail?: string;
+  deliveryName?: string;
+  deliveryAddress?: string;
+  deliveryPhone?: string;
+  deliveryContactName?: string;
+  deliveryEmail?: string;
+  carrierPay?: number;
+  fuelSurcharge?: number;
+  freightType?: string;
+  equipmentType?: string;
+  weight?: number;
+  paymentStatus?: string;
 }
 
 export interface LoadListResponse {
   data: Load[];
   meta: PaginationMeta;
 }
+
+export type CrmContactFleetEquipmentItem = { [key: string]: unknown };
 
 export interface CrmContact {
   id: string;
@@ -525,7 +598,100 @@ export interface CrmContact {
   /** @nullable */
   notes?: string | null;
   createdAt: string;
+  /** @nullable */
+  primaryContactName?: string | null;
+  /** @nullable */
+  primaryPhoneNumber?: string | null;
+  /** @nullable */
+  primaryPhoneNumber2?: string | null;
+  /** @nullable */
+  emergencyContactName?: string | null;
+  /** @nullable */
+  emergencyPhoneNumber?: string | null;
+  /** @nullable */
+  emergencyPhoneNumber2?: string | null;
+  /** @nullable */
+  brokerType?: string | null;
+  /** @nullable */
+  mcNumber?: string | null;
+  /** @nullable */
+  usdotNumber?: string | null;
+  /** @nullable */
+  coverage?: string | null;
+  freightTypes?: string[];
+  coverageStates?: string[];
+  /** @nullable */
+  paymentTerms?: string | null;
+  /** @nullable */
+  paymentDays?: number | null;
+  /** @nullable */
+  quickPay?: boolean | null;
+  /** @nullable */
+  quickPayFee?: number | null;
+  /** @nullable */
+  factoringAccepted?: string | null;
+  /** @nullable */
+  factoringConditions?: string | null;
+  /** @nullable */
+  onboardingStatus?: string | null;
+  /** @nullable */
+  carrierType?: string | null;
+  /** @nullable */
+  einNumber?: string | null;
+  /** @nullable */
+  authorityStatus?: string | null;
+  /** @nullable */
+  insuranceExpiration?: string | null;
+  /** @nullable */
+  ratePerMile?: number | null;
+  /** @nullable */
+  companyAddress?: string | null;
+  /** @nullable */
+  companyCity?: string | null;
+  /** @nullable */
+  companyState?: string | null;
+  /** @nullable */
+  companyZipCode?: string | null;
+  /** @nullable */
+  factoringCompany?: string | null;
+  /** @nullable */
+  factoringFee?: number | null;
+  /** @nullable */
+  bankName?: string | null;
+  /** @nullable */
+  accountHolder?: string | null;
+  /** @nullable */
+  accountNumber?: string | null;
+  /** @nullable */
+  routingNumber?: string | null;
+  /** @nullable */
+  bankAddress?: string | null;
+  /** @nullable */
+  bankCity?: string | null;
+  /** @nullable */
+  bankState?: string | null;
+  /** @nullable */
+  bankZipCode?: string | null;
+  /** @nullable */
+  zelleAccount?: string | null;
+  /** @nullable */
+  cashAppAccount?: string | null;
+  operatingStates?: string[];
+  /** @nullable */
+  areaOfOperation?: string | null;
+  serviceTypes?: string[];
+  /** @nullable */
+  weeklyMinimumAmount?: number | null;
+  /** @nullable */
+  totalTripsPerWeek?: number | null;
+  /** @nullable */
+  lastLoad?: string | null;
+  fleetEquipment?: CrmContactFleetEquipmentItem[];
+  /** @nullable */
+  updatedAt?: string | null;
 }
+
+export type CrmContactInputFleetEquipmentItem = { [key: string]: unknown };
 
 export interface CrmContactInput {
   companyName: string;
@@ -548,7 +714,56 @@ export interface CrmContactInput {
   rating?: number;
   tags?: string[];
   notes?: string;
+  primaryContactName?: string;
+  primaryPhoneNumber?: string;
+  primaryPhoneNumber2?: string;
+  emergencyContactName?: string;
+  emergencyPhoneNumber?: string;
+  emergencyPhoneNumber2?: string;
+  brokerType?: string;
+  mcNumber?: string;
+  usdotNumber?: string;
+  coverage?: string;
+  freightTypes?: string[];
+  coverageStates?: string[];
+  paymentTerms?: string;
+  paymentDays?: number;
+  quickPay?: boolean;
+  quickPayFee?: number;
+  factoringAccepted?: string;
+  factoringConditions?: string;
+  onboardingStatus?: string;
+  carrierType?: string;
+  einNumber?: string;
+  authorityStatus?: string;
+  insuranceExpiration?: string;
+  ratePerMile?: number;
+  companyAddress?: string;
+  companyCity?: string;
+  companyState?: string;
+  companyZipCode?: string;
+  factoringCompany?: string;
+  factoringFee?: number;
+  bankName?: string;
+  accountHolder?: string;
+  accountNumber?: string;
+  routingNumber?: string;
+  bankAddress?: string;
+  bankCity?: string;
+  bankState?: string;
+  bankZipCode?: string;
+  zelleAccount?: string;
+  cashAppAccount?: string;
+  operatingStates?: string[];
+  areaOfOperation?: string;
+  serviceTypes?: string[];
+  weeklyMinimumAmount?: number;
+  totalTripsPerWeek?: number;
+  lastLoad?: string;
+  fleetEquipment?: CrmContactInputFleetEquipmentItem[];
 }
+
+export type CrmContactUpdateFleetEquipmentItem = { [key: string]: unknown };
 
 export interface CrmContactUpdate {
   companyName?: string;
@@ -571,6 +786,53 @@ export interface CrmContactUpdate {
   rating?: number;
   tags?: string[];
   notes?: string;
+  primaryContactName?: string;
+  primaryPhoneNumber?: string;
+  primaryPhoneNumber2?: string;
+  emergencyContactName?: string;
+  emergencyPhoneNumber?: string;
+  emergencyPhoneNumber2?: string;
+  brokerType?: string;
+  mcNumber?: string;
+  usdotNumber?: string;
+  coverage?: string;
+  freightTypes?: string[];
+  coverageStates?: string[];
+  paymentTerms?: string;
+  paymentDays?: number;
+  quickPay?: boolean;
+  quickPayFee?: number;
+  factoringAccepted?: string;
+  factoringConditions?: string;
+  onboardingStatus?: string;
+  carrierType?: string;
+  einNumber?: string;
+  authorityStatus?: string;
+  insuranceExpiration?: string;
+  ratePerMile?: number;
+  companyAddress?: string;
+  companyCity?: string;
+  companyState?: string;
+  companyZipCode?: string;
+  factoringCompany?: string;
+  factoringFee?: number;
+  bankName?: string;
+  accountHolder?: string;
+  accountNumber?: string;
+  routingNumber?: string;
+  bankAddress?: string;
+  bankCity?: string;
+  bankState?: string;
+  bankZipCode?: string;
+  zelleAccount?: string;
+  cashAppAccount?: string;
+  operatingStates?: string[];
+  areaOfOperation?: string;
+  serviceTypes?: string[];
+  weeklyMinimumAmount?: number;
+  totalTripsPerWeek?: number;
+  lastLoad?: string;
+  fleetEquipment?: CrmContactUpdateFleetEquipmentItem[];
 }
 
 export interface CrmContactListResponse {

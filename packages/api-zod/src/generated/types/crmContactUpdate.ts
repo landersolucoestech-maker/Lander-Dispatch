@@ -5,6 +5,7 @@
  * Lander Dispatch API
  * OpenAPI spec version: 0.1.0
  */
+import type { CrmContactUpdateFleetEquipmentItem } from './crmContactUpdateFleetEquipmentItem';
 
 export interface CrmContactUpdate {
   companyName?: string;
@@ -27,4 +28,51 @@ export interface CrmContactUpdate {
   rating?: number;
   tags?: string[];
   notes?: string;
+  primaryContactName?: string;
+  primaryPhoneNumber?: string;
+  primaryPhoneNumber2?: string;
+  emergencyContactName?: string;
+  emergencyPhoneNumber?: string;
+  emergencyPhoneNumber2?: string;
+  brokerType?: string;
+  mcNumber?: string;
+  usdotNumber?: string;
+  coverage?: string;
+  freightTypes?: string[];
+  coverageStates?: string[];
+  paymentTerms?: string;
+  paymentDays?: number;
+  quickPay?: boolean;
+  quickPayFee?: number;
+  factoringAccepted?: string;
+  factoringConditions?: string;
+  onboardingStatus?: string;
+  carrierType?: string;
+  einNumber?: string;
+  authorityStatus?: string;
+  insuranceExpiration?: Date;
+  ratePerMile?: number;
+  companyAddress?: string;
+  companyCity?: string;
+  companyState?: string;
+  companyZipCode?: string;
+  factoringCompany?: string;
+  factoringFee?: number;
+  bankName?: string;
+  accountHolder?: string;
+  accountNumber?: string;
+  routingNumber?: string;
+  bankAddress?: string;
+  bankCity?: string;
+  bankState?: string;
+  bankZipCode?: string;
+  zelleAccount?: string;
+  cashAppAccount?: string;
+  operatingStates?: string[];
+  areaOfOperation?: string;
+  serviceTypes?: string[];
+  weeklyMinimumAmount?: number;
+  totalTripsPerWeek?: number;
+  lastLoad?: Date;
+  fleetEquipment?: CrmContactUpdateFleetEquipmentItem[];
 }

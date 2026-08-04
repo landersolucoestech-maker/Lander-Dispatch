@@ -88,4 +88,8 @@ export interface Carrier {
   createdAt: Date;
   /** @nullable */
   updatedAt?: Date | null;
+  /** @nullable */
+  bankAddress?: string | null;
+  /** @nullable */
+  bankZip?: string | null;
 }
