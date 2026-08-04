@@ -1,0 +1,2587 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: Lander Dispatch API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: Auth
+    description: Authentication endpoints
+  - name: Dashboard
+    description: Dashboard KPIs and activity
+  - name: Carriers
+    description: Carrier management
+  - name: Brokers
+    description: Broker management
+  - name: Loads
+    description: Load management
+  - name: CRM
+    description: CRM contacts and leads
+  - name: Invoices
+    description: Invoice management
+  - name: Transactions
+    description: Transaction management
+  - name: ProfitLoss
+    description: Profit and loss reporting
+  - name: Settings
+    description: Application settings
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  # Auth
+  /auth/user:
+    get:
+      tags: [Auth]
+      operationId: getCurrentAuthUser
+      summary: Get the currently authenticated user
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationSessionHeader'
+        - $ref: '#/components/parameters/SessionCookie'
+      responses:
+        '200':
+          description: Auth status resolved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthUserEnvelope'
+  /login:
+    get:
+      tags: [Auth]
+      operationId: beginBrowserLogin
+      summary: Start the browser OIDC login flow
+      parameters:
+        - name: returnTo
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Redirect to OIDC
+  /callback:
+    get:
+      tags: [Auth]
+      operationId: handleBrowserLoginCallback
+      summary: Complete the browser OIDC login flow
+      parameters:
+        - name: code
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: iss
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Redirect on success
+  /logout:
+    get:
+      tags: [Auth]
+      operationId: logoutBrowserSession
+      summary: Clear the session and begin OIDC logout
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationSessionHeader'
+        - $ref: '#/components/parameters/SessionCookie'
+        - name: returnTo
+          in: query
+          required: false
+          schema:
+            type: string
+            default: /
+      responses:
+        '302':
+          description: Redirect to OIDC logout
+
+  # Dashboard
+  /dashboard/kpis:
+    get:
+      tags: [Dashboard]
+      operationId: getDashboardKpis
+      summary: Get dashboard KPI metrics
+      responses:
+        '200':
+          description: KPI data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardKpis'
+  /dashboard/activity:
+    get:
+      tags: [Dashboard]
+      operationId: getDashboardActivity
+      summary: Get recent activity feed
+      responses:
+        '200':
+          description: Activity items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ActivityItem'
+  /dashboard/alerts:
+    get:
+      tags: [Dashboard]
+      operationId: getDashboardAlerts
+      summary: Get active alerts
+      responses:
+        '200':
+          description: Alert items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AlertItem'
+
+  # Carriers
+  /carriers:
+    get:
+      tags: [Carriers]
+      operationId: listCarriers
+      summary: List carriers
+      parameters:
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Paginated carrier list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CarrierListResponse'
+    post:
+      tags: [Carriers]
+      operationId: createCarrier
+      summary: Create a carrier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CarrierInput'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Carrier'
+  /carriers/{carrierId}:
+    get:
+      tags: [Carriers]
+      operationId: getCarrier
+      summary: Get a carrier by ID
+      parameters:
+        - name: carrierId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Carrier detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Carrier'
+    patch:
+      tags: [Carriers]
+      operationId: updateCarrier
+      summary: Update a carrier
+      parameters:
+        - name: carrierId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CarrierUpdate'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Carrier'
+    delete:
+      tags: [Carriers]
+      operationId: deleteCarrier
+      summary: Delete a carrier
+      parameters:
+        - name: carrierId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Deleted
+  /carriers/overview:
+    get:
+      tags: [Carriers]
+      operationId: getCarriersOverview
+      summary: Get carrier overview stats
+      responses:
+        '200':
+          description: Overview stats
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CarrierOverview'
+
+  # Brokers
+  /brokers:
+    get:
+      tags: [Brokers]
+      operationId: listBrokers
+      summary: List brokers
+      parameters:
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Paginated broker list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrokerListResponse'
+    post:
+      tags: [Brokers]
+      operationId: createBroker
+      summary: Create a broker
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BrokerInput'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Broker'
+  /brokers/{brokerId}:
+    get:
+      tags: [Brokers]
+      operationId: getBroker
+      summary: Get a broker by ID
+      parameters:
+        - name: brokerId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Broker detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Broker'
+    patch:
+      tags: [Brokers]
+      operationId: updateBroker
+      summary: Update a broker
+      parameters:
+        - name: brokerId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BrokerUpdate'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Broker'
+    delete:
+      tags: [Brokers]
+      operationId: deleteBroker
+      summary: Delete a broker
+      parameters:
+        - name: brokerId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Deleted
+
+  # Loads
+  /loads:
+    get:
+      tags: [Loads]
+      operationId: listLoads
+      summary: List loads
+      parameters:
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: carrierId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: brokerId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Paginated load list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoadListResponse'
+    post:
+      tags: [Loads]
+      operationId: createLoad
+      summary: Create a load
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoadInput'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Load'
+  /loads/{loadId}:
+    get:
+      tags: [Loads]
+      operationId: getLoad
+      summary: Get a load by ID
+      parameters:
+        - name: loadId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Load detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Load'
+    patch:
+      tags: [Loads]
+      operationId: updateLoad
+      summary: Update a load
+      parameters:
+        - name: loadId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoadUpdate'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Load'
+    delete:
+      tags: [Loads]
+      operationId: deleteLoad
+      summary: Delete a load
+      parameters:
+        - name: loadId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Deleted
+
+  # CRM - Contacts
+  /crm/contacts:
+    get:
+      tags: [CRM]
+      operationId: listCrmContacts
+      summary: List CRM contacts
+      parameters:
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Contact list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CrmContactListResponse'
+    post:
+      tags: [CRM]
+      operationId: createCrmContact
+      summary: Create a CRM contact
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrmContactInput'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CrmContact'
+  /crm/contacts/{contactId}:
+    get:
+      tags: [CRM]
+      operationId: getCrmContact
+      summary: Get a CRM contact
+      parameters:
+        - name: contactId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Contact detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CrmContact'
+    patch:
+      tags: [CRM]
+      operationId: updateCrmContact
+      summary: Update a CRM contact
+      parameters:
+        - name: contactId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrmContactUpdate'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CrmContact'
+    delete:
+      tags: [CRM]
+      operationId: deleteCrmContact
+      summary: Delete a CRM contact
+      parameters:
+        - name: contactId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Deleted
+
+  # CRM - Leads
+  /crm/leads:
+    get:
+      tags: [CRM]
+      operationId: listCrmLeads
+      summary: List CRM leads
+      parameters:
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Lead list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CrmLeadListResponse'
+    post:
+      tags: [CRM]
+      operationId: createCrmLead
+      summary: Create a CRM lead
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrmLeadInput'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CrmLead'
+  /crm/leads/{leadId}:
+    get:
+      tags: [CRM]
+      operationId: getCrmLead
+      summary: Get a CRM lead
+      parameters:
+        - name: leadId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lead detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CrmLead'
+    patch:
+      tags: [CRM]
+      operationId: updateCrmLead
+      summary: Update a CRM lead
+      parameters:
+        - name: leadId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrmLeadUpdate'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CrmLead'
+    delete:
+      tags: [CRM]
+      operationId: deleteCrmLead
+      summary: Delete a CRM lead
+      parameters:
+        - name: leadId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Deleted
+
+  # Invoices
+  /invoices:
+    get:
+      tags: [Invoices]
+      operationId: listInvoices
+      summary: List invoices
+      parameters:
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: carrierId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Invoice list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvoiceListResponse'
+    post:
+      tags: [Invoices]
+      operationId: createInvoice
+      summary: Create an invoice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvoiceInput'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
+  /invoices/{invoiceId}:
+    get:
+      tags: [Invoices]
+      operationId: getInvoice
+      summary: Get an invoice
+      parameters:
+        - name: invoiceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Invoice detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
+    patch:
+      tags: [Invoices]
+      operationId: updateInvoice
+      summary: Update an invoice
+      parameters:
+        - name: invoiceId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvoiceUpdate'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
+    delete:
+      tags: [Invoices]
+      operationId: deleteInvoice
+      summary: Delete an invoice
+      parameters:
+        - name: invoiceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Deleted
+  /invoices/{invoiceId}/payments:
+    post:
+      tags: [Invoices]
+      operationId: recordInvoicePayment
+      summary: Record a payment for an invoice
+      parameters:
+        - name: invoiceId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvoicePaymentInput'
+      responses:
+        '201':
+          description: Payment recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
+
+  # Transactions
+  /transactions:
+    get:
+      tags: [Transactions]
+      operationId: listTransactions
+      summary: List transactions
+      parameters:
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Transaction list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionListResponse'
+    post:
+      tags: [Transactions]
+      operationId: createTransaction
+      summary: Create a transaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransactionInput'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+  /transactions/{transactionId}:
+    get:
+      tags: [Transactions]
+      operationId: getTransaction
+      summary: Get a transaction
+      parameters:
+        - name: transactionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Transaction detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+    patch:
+      tags: [Transactions]
+      operationId: updateTransaction
+      summary: Update a transaction
+      parameters:
+        - name: transactionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransactionUpdate'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+    delete:
+      tags: [Transactions]
+      operationId: deleteTransaction
+      summary: Delete a transaction
+      parameters:
+        - name: transactionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Deleted
+  /transactions/kpis:
+    get:
+      tags: [Transactions]
+      operationId: getTransactionKpis
+      summary: Get transaction KPI totals
+      responses:
+        '200':
+          description: KPIs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionKpis'
+
+  # Profit & Loss
+  /accounting/profit-loss:
+    get:
+      tags: [ProfitLoss]
+      operationId: getProfitLoss
+      summary: Get profit and loss report
+      parameters:
+        - name: period
+          in: query
+          required: false
+          schema:
+            type: string
+            default: this_month
+        - name: startDate
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: P&L report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfitLossReport'
+
+  # Settings
+  /settings/company:
+    get:
+      tags: [Settings]
+      operationId: getCompanyProfile
+      summary: Get company profile
+      responses:
+        '200':
+          description: Company profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyProfile'
+    patch:
+      tags: [Settings]
+      operationId: updateCompanyProfile
+      summary: Update company profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompanyProfileUpdate'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyProfile'
+
+components:
+  parameters:
+    AuthorizationSessionHeader:
+      name: Authorization
+      in: header
+      required: false
+      schema:
+        type: string
+    SessionCookie:
+      name: sid
+      in: cookie
+      required: false
+      schema:
+        type: string
+
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    # Auth
+    AuthUser:
+      type: object
+      required: [id, email, firstName, lastName, profileImageUrl]
+      properties:
+        id:
+          type: string
+        email:
+          type: [string, 'null']
+        firstName:
+          type: [string, 'null']
+        lastName:
+          type: [string, 'null']
+        profileImageUrl:
+          type: [string, 'null']
+    AuthUserEnvelope:
+      type: object
+      required: [user]
+      properties:
+        user:
+          oneOf:
+            - $ref: '#/components/schemas/AuthUser'
+            - type: 'null'
+
+    # Pagination
+    PaginationMeta:
+      type: object
+      required: [page, pageSize, total, totalPages]
+      properties:
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        total:
+          type: integer
+        totalPages:
+          type: integer
+
+    # Dashboard
+    DashboardKpis:
+      type: object
+      required: [activeCarriers, inactiveCarriers, loadsBooked, monthlyRevenue]
+      properties:
+        activeCarriers:
+          type: integer
+        inactiveCarriers:
+          type: integer
+        loadsBooked:
+          type: integer
+        monthlyRevenue:
+          type: number
+    ActivityItem:
+      type: object
+      required: [id, description, entityType, entityId, createdAt]
+      properties:
+        id:
+          type: string
+        description:
+          type: string
+        entityType:
+          type: string
+        entityId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    AlertItem:
+      type: object
+      required: [id, alertType, description, priority, relatedEntityType, relatedEntityId]
+      properties:
+        id:
+          type: string
+        alertType:
+          type: string
+        description:
+          type: string
+        priority:
+          type: string
+        relatedEntityType:
+          type: string
+        relatedEntityId:
+          type: string
+        dueDate:
+          type: [string, 'null']
+          format: date
+
+    # Carrier
+    Carrier:
+      type: object
+      required: [id, companyName, status, createdAt]
+      properties:
+        id:
+          type: string
+        companyName:
+          type: string
+        carrierType:
+          type: [string, 'null']
+        website:
+          type: [string, 'null']
+        usdotNumber:
+          type: [string, 'null']
+        mcNumber:
+          type: [string, 'null']
+        einNumber:
+          type: [string, 'null']
+        status:
+          type: string
+        priority:
+          type: [string, 'null']
+        rating:
+          type: [number, 'null']
+        tags:
+          type: array
+          items:
+            type: string
+        notes:
+          type: [string, 'null']
+        primaryContact:
+          type: [string, 'null']
+        phone:
+          type: [string, 'null']
+        email:
+          type: [string, 'null']
+        lastContact:
+          type: [string, 'null']
+          format: date
+        companyAddress:
+          type: [string, 'null']
+        companyCity:
+          type: [string, 'null']
+        companyState:
+          type: [string, 'null']
+        companyZip:
+          type: [string, 'null']
+        fleetSize:
+          type: [integer, 'null']
+        trucks:
+          type: [integer, 'null']
+        trailers:
+          type: [integer, 'null']
+        drivers:
+          type: [integer, 'null']
+        operatingStates:
+          type: array
+          items:
+            type: string
+        serviceTypes:
+          type: array
+          items:
+            type: string
+        ratePerMile:
+          type: [number, 'null']
+        insuranceExpiration:
+          type: [string, 'null']
+          format: date
+        authorityStatus:
+          type: [string, 'null']
+        paymentTerms:
+          type: [string, 'null']
+        quickPay:
+          type: [boolean, 'null']
+        factoringCompany:
+          type: [string, 'null']
+        factoringFee:
+          type: [number, 'null']
+        bankName:
+          type: [string, 'null']
+        accountHolder:
+          type: [string, 'null']
+        accountNumberLast4:
+          type: [string, 'null']
+        routingNumberLast4:
+          type: [string, 'null']
+        bankCity:
+          type: [string, 'null']
+        bankState:
+          type: [string, 'null']
+        zelleAccount:
+          type: [string, 'null']
+        cashAppAccount:
+          type: [string, 'null']
+        lastLoadDate:
+          type: [string, 'null']
+          format: date
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: [string, 'null']
+          format: date-time
+    CarrierInput:
+      type: object
+      required: [companyName]
+      properties:
+        companyName:
+          type: string
+          minLength: 1
+        carrierType:
+          type: string
+        website:
+          type: string
+        usdotNumber:
+          type: string
+        mcNumber:
+          type: string
+        einNumber:
+          type: string
+        status:
+          type: string
+        priority:
+          type: string
+        rating:
+          type: number
+        tags:
+          type: array
+          items:
+            type: string
+        notes:
+          type: string
+        primaryContact:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        lastContact:
+          type: string
+        companyAddress:
+          type: string
+        companyCity:
+          type: string
+        companyState:
+          type: string
+        companyZip:
+          type: string
+        fleetSize:
+          type: integer
+        trucks:
+          type: integer
+        trailers:
+          type: integer
+        drivers:
+          type: integer
+        operatingStates:
+          type: array
+          items:
+            type: string
+        serviceTypes:
+          type: array
+          items:
+            type: string
+        ratePerMile:
+          type: number
+        insuranceExpiration:
+          type: string
+        authorityStatus:
+          type: string
+        paymentTerms:
+          type: string
+        quickPay:
+          type: boolean
+        factoringCompany:
+          type: string
+        factoringFee:
+          type: number
+        bankName:
+          type: string
+        accountHolder:
+          type: string
+        accountNumber:
+          type: string
+        routingNumber:
+          type: string
+        bankAddress:
+          type: string
+        bankCity:
+          type: string
+        bankState:
+          type: string
+        bankZip:
+          type: string
+        zelleAccount:
+          type: string
+        cashAppAccount:
+          type: string
+    CarrierUpdate:
+      type: object
+      properties:
+        companyName:
+          type: string
+          minLength: 1
+        carrierType:
+          type: string
+        website:
+          type: string
+        usdotNumber:
+          type: string
+        mcNumber:
+          type: string
+        einNumber:
+          type: string
+        status:
+          type: string
+        priority:
+          type: string
+        rating:
+          type: number
+        tags:
+          type: array
+          items:
+            type: string
+        notes:
+          type: string
+        primaryContact:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        lastContact:
+          type: string
+        companyAddress:
+          type: string
+        companyCity:
+          type: string
+        companyState:
+          type: string
+        companyZip:
+          type: string
+        fleetSize:
+          type: integer
+        trucks:
+          type: integer
+        trailers:
+          type: integer
+        drivers:
+          type: integer
+        operatingStates:
+          type: array
+          items:
+            type: string
+        serviceTypes:
+          type: array
+          items:
+            type: string
+        ratePerMile:
+          type: number
+        insuranceExpiration:
+          type: string
+        authorityStatus:
+          type: string
+        paymentTerms:
+          type: string
+        quickPay:
+          type: boolean
+        factoringCompany:
+          type: string
+        factoringFee:
+          type: number
+        bankName:
+          type: string
+        accountHolder:
+          type: string
+        accountNumber:
+          type: string
+        routingNumber:
+          type: string
+        bankAddress:
+          type: string
+        bankCity:
+          type: string
+        bankState:
+          type: string
+        bankZip:
+          type: string
+        zelleAccount:
+          type: string
+        cashAppAccount:
+          type: string
+    CarrierListResponse:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Carrier'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+    CarrierOverview:
+      type: object
+      required: [total, active, inactive]
+      properties:
+        total:
+          type: integer
+        active:
+          type: integer
+        inactive:
+          type: integer
+
+    # Broker
+    Broker:
+      type: object
+      required: [id, companyName, status, createdAt]
+      properties:
+        id:
+          type: string
+        companyName:
+          type: string
+        brokerType:
+          type: [string, 'null']
+        website:
+          type: [string, 'null']
+        mcNumber:
+          type: [string, 'null']
+        usdotNumber:
+          type: [string, 'null']
+        primaryContact:
+          type: [string, 'null']
+        phone:
+          type: [string, 'null']
+        email:
+          type: [string, 'null']
+        lastContact:
+          type: [string, 'null']
+          format: date
+        freightTypes:
+          type: array
+          items:
+            type: string
+        coverage:
+          type: [string, 'null']
+        selectedStates:
+          type: array
+          items:
+            type: string
+        paymentTerms:
+          type: [string, 'null']
+        paymentDays:
+          type: [integer, 'null']
+        quickPay:
+          type: [boolean, 'null']
+        quickPayFee:
+          type: [number, 'null']
+        factoringAccepted:
+          type: [string, 'null']
+        onboardingStatus:
+          type: [string, 'null']
+        rating:
+          type: [number, 'null']
+        status:
+          type: string
+        priority:
+          type: [string, 'null']
+        tags:
+          type: array
+          items:
+            type: string
+        notes:
+          type: [string, 'null']
+        lastLoadDate:
+          type: [string, 'null']
+          format: date
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: [string, 'null']
+          format: date-time
+    BrokerInput:
+      type: object
+      required: [companyName]
+      properties:
+        companyName:
+          type: string
+          minLength: 1
+        brokerType:
+          type: string
+        website:
+          type: string
+        mcNumber:
+          type: string
+        usdotNumber:
+          type: string
+        primaryContact:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        lastContact:
+          type: string
+        freightTypes:
+          type: array
+          items:
+            type: string
+        coverage:
+          type: string
+        selectedStates:
+          type: array
+          items:
+            type: string
+        paymentTerms:
+          type: string
+        paymentDays:
+          type: integer
+        quickPay:
+          type: boolean
+        quickPayFee:
+          type: number
+        factoringAccepted:
+          type: string
+        onboardingStatus:
+          type: string
+        rating:
+          type: number
+        status:
+          type: string
+        priority:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        notes:
+          type: string
+    BrokerUpdate:
+      type: object
+      properties:
+        companyName:
+          type: string
+          minLength: 1
+        brokerType:
+          type: string
+        website:
+          type: string
+        mcNumber:
+          type: string
+        usdotNumber:
+          type: string
+        primaryContact:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        lastContact:
+          type: string
+        freightTypes:
+          type: array
+          items:
+            type: string
+        coverage:
+          type: string
+        selectedStates:
+          type: array
+          items:
+            type: string
+        paymentTerms:
+          type: string
+        paymentDays:
+          type: integer
+        quickPay:
+          type: boolean
+        quickPayFee:
+          type: number
+        factoringAccepted:
+          type: string
+        onboardingStatus:
+          type: string
+        rating:
+          type: number
+        status:
+          type: string
+        priority:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        notes:
+          type: string
+    BrokerListResponse:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Broker'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    # Load
+    LoadVehicle:
+      type: object
+      required: [vehicleNumber]
+      properties:
+        vehicleNumber:
+          type: integer
+        year:
+          type: [string, 'null']
+        make:
+          type: [string, 'null']
+        model:
+          type: [string, 'null']
+        type:
+          type: [string, 'null']
+        color:
+          type: [string, 'null']
+        plate:
+          type: [string, 'null']
+        vin:
+          type: [string, 'null']
+        lotNumber:
+          type: [string, 'null']
+        additionalInfo:
+          type: [string, 'null']
+    Load:
+      type: object
+      required: [id, loadId, status, createdAt]
+      properties:
+        id:
+          type: string
+        loadId:
+          type: string
+        carrierId:
+          type: [string, 'null']
+        carrierName:
+          type: [string, 'null']
+        brokerId:
+          type: [string, 'null']
+        brokerName:
+          type: [string, 'null']
+        status:
+          type: string
+        dispatchDate:
+          type: [string, 'null']
+          format: date
+        pickupCity:
+          type: [string, 'null']
+        pickupState:
+          type: [string, 'null']
+        pickupZip:
+          type: [string, 'null']
+        pickupEstimated:
+          type: [string, 'null']
+          format: date
+        pickupDeadline:
+          type: [string, 'null']
+          format: date
+        deliveryCity:
+          type: [string, 'null']
+        deliveryState:
+          type: [string, 'null']
+        deliveryZip:
+          type: [string, 'null']
+        deliveryEstimated:
+          type: [string, 'null']
+          format: date
+        deliveryDeadline:
+          type: [string, 'null']
+          format: date
+        miles:
+          type: [number, 'null']
+        rate:
+          type: [number, 'null']
+        ratePerMile:
+          type: [number, 'null']
+        paymentMethod:
+          type: [string, 'null']
+        vehicles:
+          type: array
+          items:
+            $ref: '#/components/schemas/LoadVehicle'
+        dispatchInstructions:
+          type: [string, 'null']
+        pickupInstructions:
+          type: [string, 'null']
+        deliveryInstructions:
+          type: [string, 'null']
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: [string, 'null']
+          format: date-time
+    LoadInput:
+      type: object
+      properties:
+        carrierId:
+          type: string
+        brokerId:
+          type: string
+        status:
+          type: string
+        dispatchDate:
+          type: string
+        pickupCity:
+          type: string
+        pickupState:
+          type: string
+        pickupZip:
+          type: string
+        pickupEstimated:
+          type: string
+        pickupDeadline:
+          type: string
+        deliveryCity:
+          type: string
+        deliveryState:
+          type: string
+        deliveryZip:
+          type: string
+        deliveryEstimated:
+          type: string
+        deliveryDeadline:
+          type: string
+        miles:
+          type: number
+        rate:
+          type: number
+        paymentMethod:
+          type: string
+        vehicles:
+          type: array
+          items:
+            $ref: '#/components/schemas/LoadVehicle'
+        dispatchInstructions:
+          type: string
+        pickupInstructions:
+          type: string
+        deliveryInstructions:
+          type: string
+    LoadUpdate:
+      type: object
+      properties:
+        carrierId:
+          type: string
+        brokerId:
+          type: string
+        status:
+          type: string
+        dispatchDate:
+          type: string
+        pickupCity:
+          type: string
+        pickupState:
+          type: string
+        pickupZip:
+          type: string
+        pickupEstimated:
+          type: string
+        pickupDeadline:
+          type: string
+        deliveryCity:
+          type: string
+        deliveryState:
+          type: string
+        deliveryZip:
+          type: string
+        deliveryEstimated:
+          type: string
+        deliveryDeadline:
+          type: string
+        miles:
+          type: number
+        rate:
+          type: number
+        paymentMethod:
+          type: string
+        vehicles:
+          type: array
+          items:
+            $ref: '#/components/schemas/LoadVehicle'
+        dispatchInstructions:
+          type: string
+        pickupInstructions:
+          type: string
+        deliveryInstructions:
+          type: string
+    LoadListResponse:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Load'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    # CRM Contact
+    CrmContact:
+      type: object
+      required: [id, companyName, status, createdAt]
+      properties:
+        id:
+          type: string
+        companyName:
+          type: string
+        contactType:
+          type: [string, 'null']
+        primaryContact:
+          type: [string, 'null']
+        phone:
+          type: [string, 'null']
+        phone2:
+          type: [string, 'null']
+        email:
+          type: [string, 'null']
+        website:
+          type: [string, 'null']
+        streetAddress:
+          type: [string, 'null']
+        city:
+          type: [string, 'null']
+        state:
+          type: [string, 'null']
+        zipCode:
+          type: [string, 'null']
+        coverageArea:
+          type: [string, 'null']
+        businessHours:
+          type: [string, 'null']
+        emergencyService:
+          type: [boolean, 'null']
+        services:
+          type: [string, 'null']
+        status:
+          type: string
+        priority:
+          type: [string, 'null']
+        rating:
+          type: [number, 'null']
+        lastContact:
+          type: [string, 'null']
+          format: date
+        tags:
+          type: array
+          items:
+            type: string
+        notes:
+          type: [string, 'null']
+        createdAt:
+          type: string
+          format: date-time
+    CrmContactInput:
+      type: object
+      required: [companyName]
+      properties:
+        companyName:
+          type: string
+        contactType:
+          type: string
+        primaryContact:
+          type: string
+        phone:
+          type: string
+        phone2:
+          type: string
+        email:
+          type: string
+        website:
+          type: string
+        streetAddress:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        zipCode:
+          type: string
+        coverageArea:
+          type: string
+        businessHours:
+          type: string
+        emergencyService:
+          type: boolean
+        services:
+          type: string
+        status:
+          type: string
+        priority:
+          type: string
+        rating:
+          type: number
+        tags:
+          type: array
+          items:
+            type: string
+        notes:
+          type: string
+    CrmContactUpdate:
+      type: object
+      properties:
+        companyName:
+          type: string
+        contactType:
+          type: string
+        primaryContact:
+          type: string
+        phone:
+          type: string
+        phone2:
+          type: string
+        email:
+          type: string
+        website:
+          type: string
+        streetAddress:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        zipCode:
+          type: string
+        coverageArea:
+          type: string
+        businessHours:
+          type: string
+        emergencyService:
+          type: boolean
+        services:
+          type: string
+        status:
+          type: string
+        priority:
+          type: string
+        rating:
+          type: number
+        tags:
+          type: array
+          items:
+            type: string
+        notes:
+          type: string
+    CrmContactListResponse:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/CrmContact'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    # CRM Lead
+    CrmLead:
+      type: object
+      required: [id, companyName, status, pipelineStage, createdAt]
+      properties:
+        id:
+          type: string
+        companyName:
+          type: string
+        primaryContact:
+          type: [string, 'null']
+        phone:
+          type: [string, 'null']
+        email:
+          type: [string, 'null']
+        website:
+          type: [string, 'null']
+        usdotNumber:
+          type: [string, 'null']
+        mcNumber:
+          type: [string, 'null']
+        city:
+          type: [string, 'null']
+        state:
+          type: [string, 'null']
+        fleetSize:
+          type: [integer, 'null']
+        serviceTypes:
+          type: array
+          items:
+            type: string
+        operatingStates:
+          type: array
+          items:
+            type: string
+        leadSource:
+          type: [string, 'null']
+        pipelineStage:
+          type: string
+        estimatedWeeklyLoads:
+          type: [integer, 'null']
+        estimatedWeeklyRevenue:
+          type: [number, 'null']
+        priority:
+          type: [string, 'null']
+        rating:
+          type: [number, 'null']
+        nextFollowUp:
+          type: [string, 'null']
+          format: date
+        lastContact:
+          type: [string, 'null']
+          format: date
+        status:
+          type: string
+        convertedCarrierId:
+          type: [string, 'null']
+        tags:
+          type: array
+          items:
+            type: string
+        notes:
+          type: [string, 'null']
+        createdAt:
+          type: string
+          format: date-time
+    CrmLeadInput:
+      type: object
+      required: [companyName]
+      properties:
+        companyName:
+          type: string
+        primaryContact:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        website:
+          type: string
+        usdotNumber:
+          type: string
+        mcNumber:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        fleetSize:
+          type: integer
+        serviceTypes:
+          type: array
+          items:
+            type: string
+        operatingStates:
+          type: array
+          items:
+            type: string
+        leadSource:
+          type: string
+        pipelineStage:
+          type: string
+        estimatedWeeklyLoads:
+          type: integer
+        estimatedWeeklyRevenue:
+          type: number
+        priority:
+          type: string
+        rating:
+          type: number
+        nextFollowUp:
+          type: string
+        lastContact:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        notes:
+          type: string
+    CrmLeadUpdate:
+      type: object
+      properties:
+        companyName:
+          type: string
+        primaryContact:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        website:
+          type: string
+        usdotNumber:
+          type: string
+        mcNumber:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        fleetSize:
+          type: integer
+        serviceTypes:
+          type: array
+          items:
+            type: string
+        operatingStates:
+          type: array
+          items:
+            type: string
+        leadSource:
+          type: string
+        pipelineStage:
+          type: string
+        estimatedWeeklyLoads:
+          type: integer
+        estimatedWeeklyRevenue:
+          type: number
+        priority:
+          type: string
+        rating:
+          type: number
+        nextFollowUp:
+          type: string
+        lastContact:
+          type: string
+        status:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        notes:
+          type: string
+    CrmLeadListResponse:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/CrmLead'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    # Invoice
+    InvoicePayment:
+      type: object
+      required: [id, paymentDate, amount, paymentMethod]
+      properties:
+        id:
+          type: string
+        paymentDate:
+          type: string
+          format: date
+        amount:
+          type: number
+        paymentMethod:
+          type: string
+        reference:
+          type: [string, 'null']
+        notes:
+          type: [string, 'null']
+    Invoice:
+      type: object
+      required: [id, invoiceNumber, status, total, amountPaid, balance, createdAt]
+      properties:
+        id:
+          type: string
+        invoiceNumber:
+          type: string
+        carrierId:
+          type: [string, 'null']
+        carrierName:
+          type: [string, 'null']
+        issueDate:
+          type: [string, 'null']
+          format: date
+        dueDate:
+          type: [string, 'null']
+          format: date
+        total:
+          type: number
+        amountPaid:
+          type: number
+        balance:
+          type: number
+        status:
+          type: string
+        notes:
+          type: [string, 'null']
+        payments:
+          type: array
+          items:
+            $ref: '#/components/schemas/InvoicePayment'
+        loadIds:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: [string, 'null']
+          format: date-time
+    InvoiceInput:
+      type: object
+      required: [carrierId, total]
+      properties:
+        carrierId:
+          type: string
+        issueDate:
+          type: string
+        dueDate:
+          type: string
+        total:
+          type: number
+        loadIds:
+          type: array
+          items:
+            type: string
+        notes:
+          type: string
+    InvoiceUpdate:
+      type: object
+      properties:
+        carrierId:
+          type: string
+        issueDate:
+          type: string
+        dueDate:
+          type: string
+        total:
+          type: number
+        loadIds:
+          type: array
+          items:
+            type: string
+        notes:
+          type: string
+        status:
+          type: string
+    InvoicePaymentInput:
+      type: object
+      required: [paymentDate, amount, paymentMethod]
+      properties:
+        paymentDate:
+          type: string
+        amount:
+          type: number
+        paymentMethod:
+          type: string
+        reference:
+          type: string
+        notes:
+          type: string
+    InvoiceListResponse:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Invoice'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    # Transaction
+    Transaction:
+      type: object
+      required: [id, transactionId, type, category, amount, status, createdAt]
+      properties:
+        id:
+          type: string
+        transactionId:
+          type: string
+        date:
+          type: [string, 'null']
+          format: date
+        dueDate:
+          type: [string, 'null']
+          format: date
+        type:
+          type: string
+        category:
+          type: string
+        description:
+          type: [string, 'null']
+        carrierId:
+          type: [string, 'null']
+        carrierName:
+          type: [string, 'null']
+        invoiceId:
+          type: [string, 'null']
+        invoiceNumber:
+          type: [string, 'null']
+        paymentMethod:
+          type: [string, 'null']
+        amount:
+          type: number
+        status:
+          type: string
+        referenceNumber:
+          type: [string, 'null']
+        notes:
+          type: [string, 'null']
+        createdAt:
+          type: string
+          format: date-time
+    TransactionInput:
+      type: object
+      required: [type, category, amount]
+      properties:
+        date:
+          type: string
+        dueDate:
+          type: string
+        type:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+        carrierId:
+          type: string
+        invoiceId:
+          type: string
+        paymentMethod:
+          type: string
+        amount:
+          type: number
+        status:
+          type: string
+        referenceNumber:
+          type: string
+        notes:
+          type: string
+    TransactionUpdate:
+      type: object
+      properties:
+        date:
+          type: string
+        dueDate:
+          type: string
+        type:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+        carrierId:
+          type: string
+        invoiceId:
+          type: string
+        paymentMethod:
+          type: string
+        amount:
+          type: number
+        status:
+          type: string
+        referenceNumber:
+          type: string
+        notes:
+          type: string
+    TransactionListResponse:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Transaction'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+    TransactionKpis:
+      type: object
+      required: [totalIncome, totalExpenses, netBalance, pendingCount]
+      properties:
+        totalIncome:
+          type: number
+        totalExpenses:
+          type: number
+        netBalance:
+          type: number
+        pendingCount:
+          type: integer
+
+    # Profit & Loss
+    PnlCategoryLine:
+      type: object
+      required: [category, amount]
+      properties:
+        category:
+          type: string
+        amount:
+          type: number
+    ProfitLossReport:
+      type: object
+      required: [period, startDate, endDate, totalRevenue, totalExpenses, netProfit, netProfitMargin]
+      properties:
+        period:
+          type: string
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        totalRevenue:
+          type: number
+        totalExpenses:
+          type: number
+        netProfit:
+          type: number
+        netProfitMargin:
+          type: number
+        revenueLines:
+          type: array
+          items:
+            $ref: '#/components/schemas/PnlCategoryLine'
+        expenseLines:
+          type: array
+          items:
+            $ref: '#/components/schemas/PnlCategoryLine'
+        previousPeriodRevenue:
+          type: [number, 'null']
+        previousPeriodExpenses:
+          type: [number, 'null']
+        previousPeriodNetProfit:
+          type: [number, 'null']
+
+    # Settings
+    CompanyProfile:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
+        companyName:
+          type: [string, 'null']
+        legalCompanyName:
+          type: [string, 'null']
+        dbaName:
+          type: [string, 'null']
+        einNumber:
+          type: [string, 'null']
+        mcNumber:
+          type: [string, 'null']
+        usdotNumber:
+          type: [string, 'null']
+        companyPhone:
+          type: [string, 'null']
+        companyEmail:
+          type: [string, 'null']
+        website:
+          type: [string, 'null']
+        streetAddress:
+          type: [string, 'null']
+        city:
+          type: [string, 'null']
+        state:
+          type: [string, 'null']
+        zipCode:
+          type: [string, 'null']
+        country:
+          type: [string, 'null']
+        businessHours:
+          type: [string, 'null']
+        logoUrl:
+          type: [string, 'null']
+    CompanyProfileUpdate:
+      type: object
+      properties:
+        companyName:
+          type: string
+        legalCompanyName:
+          type: string
+        dbaName:
+          type: string
+        einNumber:
+          type: string
+        mcNumber:
+          type: string
+        usdotNumber:
+          type: string
+        companyPhone:
+          type: string
+        companyEmail:
+          type: string
+        website:
+          type: string
+        streetAddress:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        zipCode:
+          type: string
+        country:
+          type: string
+        businessHours:
+          type: string
+        logoUrl:
+          type: string
+    UploadUrlRequest:
+      type: object
+      required: [name, size, contentType]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        size:
+          type: integer
+          minimum: 1
+        contentType:
+          type: string
+          minLength: 1
+    UploadUrlResponse:
+      type: object
+      required: [uploadURL, objectPath]
+      properties:
+        uploadURL:
+          type: string
+          format: uri
+        objectPath:
+          type: string
+        metadata:
+          $ref: '#/components/schemas/UploadUrlRequest'

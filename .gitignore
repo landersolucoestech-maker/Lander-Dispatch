@@ -1,0 +1,53 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Build outputs and caches
+dist/
+build/
+out/
+coverage/
+.tmp/
+tmp/
+.cache/
+*.tsbuildinfo
+playwright-report/
+test-results/
+
+# Local databases, storage, and backups
+postgres-data/
+minio-data/
+backups/
+*.dump
+*.sql.gz
+
+# IDEs
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-error.log*
+
+# Legacy/local platform artifacts
+.local/
+.config/
+.replit
+.replitignore
+replit.md
+**/.replit-artifact/
