@@ -3,8 +3,7 @@ import { Toaster } from '@/shared/components/ui/toaster';
 import { TooltipProvider } from '@/shared/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
 import { Route, Switch, Router as WouterRouter, Redirect, useLocation } from 'wouter';
-// useLocation kept for future use within AppRouter context
-import { useAuth } from "@workspace/replit-auth-web";
+import { useAuth } from '@workspace/auth-web';
 import { Shell } from '@/shared/components/layout/Shell';
 
 // Pages
@@ -34,9 +33,8 @@ const queryClient = new QueryClient();
 
 function AppRouter() {
   const { isAuthenticated, isLoading } = useAuth();
-  const [location] = useLocation();
+  useLocation();
 
-  // While checking auth, show a neutral loading screen
   if (isLoading) {
     return (
       <div className="min-h-[100dvh] w-full flex items-center justify-center bg-background">
@@ -45,7 +43,6 @@ function AppRouter() {
     );
   }
 
-  // Not authenticated: only allow /login
   if (!isAuthenticated) {
     return (
       <Switch>
@@ -57,7 +54,6 @@ function AppRouter() {
     );
   }
 
-  // Authenticated: full app
   return (
     <Shell>
       <Switch>
