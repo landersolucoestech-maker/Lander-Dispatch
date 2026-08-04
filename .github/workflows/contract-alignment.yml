@@ -1,0 +1,329 @@
+name: Align frontend contracts
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - .github/workflows/contract-alignment.yml
+
+permissions:
+  contents: write
+
+jobs:
+  align:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install YAML parser
+        run: python3 -m pip install --disable-pip-version-check pyyaml==6.0.2
+
+      - name: Align OpenAPI schemas and React calls
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import copy
+          import re
+          import yaml
+
+          root = Path('.')
+          spec_path = root / 'packages/api-spec/openapi.yaml'
+          spec = yaml.safe_load(spec_path.read_text())
+          schemas = spec['components']['schemas']
+
+          def nullable(kind, fmt=None):
+              value = {'type': [kind, 'null']}
+              if fmt:
+                  value['format'] = fmt
+              return value
+
+          def array_of(kind):
+              return {'type': 'array', 'items': {'type': kind}}
+
+          schemas['LoadVehicle']['properties']['buyerNumber'] = nullable('string')
+
+          load_fields = {
+              'pickupName': nullable('string'),
+              'pickupAddress': nullable('string'),
+              'pickupPhone': nullable('string'),
+              'pickupContactName': nullable('string'),
+              'pickupEmail': nullable('string'),
+              'deliveryName': nullable('string'),
+              'deliveryAddress': nullable('string'),
+              'deliveryPhone': nullable('string'),
+              'deliveryContactName': nullable('string'),
+              'deliveryEmail': nullable('string'),
+              'carrierPay': nullable('number'),
+              'fuelSurcharge': nullable('number'),
+              'freightType': nullable('string'),
+              'equipmentType': nullable('string'),
+              'weight': nullable('number'),
+              'paymentStatus': nullable('string'),
+          }
+          schemas['Load']['properties'].update(load_fields)
+
+          load_input_fields = {
+              'loadId': {'type': 'string'},
+              'pickupName': {'type': 'string'},
+              'pickupAddress': {'type': 'string'},
+              'pickupPhone': {'type': 'string'},
+              'pickupContactName': {'type': 'string'},
+              'pickupEmail': {'type': 'string'},
+              'deliveryName': {'type': 'string'},
+              'deliveryAddress': {'type': 'string'},
+              'deliveryPhone': {'type': 'string'},
+              'deliveryContactName': {'type': 'string'},
+              'deliveryEmail': {'type': 'string'},
+              'carrierPay': {'type': 'number'},
+              'fuelSurcharge': {'type': 'number'},
+              'freightType': {'type': 'string'},
+              'equipmentType': {'type': 'string'},
+              'weight': {'type': 'number'},
+              'paymentStatus': {'type': 'string'},
+          }
+          schemas['LoadInput']['properties'].update(load_input_fields)
+          update_fields = copy.deepcopy(load_input_fields)
+          update_fields.pop('loadId', None)
+          schemas['LoadUpdate']['properties'].update(update_fields)
+
+          contact_response_fields = {
+              'primaryContactName': nullable('string'),
+              'primaryPhoneNumber': nullable('string'),
+              'primaryPhoneNumber2': nullable('string'),
+              'emergencyContactName': nullable('string'),
+              'emergencyPhoneNumber': nullable('string'),
+              'emergencyPhoneNumber2': nullable('string'),
+              'brokerType': nullable('string'),
+              'mcNumber': nullable('string'),
+              'usdotNumber': nullable('string'),
+              'coverage': nullable('string'),
+              'freightTypes': array_of('string'),
+              'coverageStates': array_of('string'),
+              'paymentTerms': nullable('string'),
+              'paymentDays': nullable('integer'),
+              'quickPay': nullable('boolean'),
+              'quickPayFee': nullable('number'),
+              'factoringAccepted': nullable('string'),
+              'factoringConditions': nullable('string'),
+              'onboardingStatus': nullable('string'),
+              'carrierType': nullable('string'),
+              'einNumber': nullable('string'),
+              'authorityStatus': nullable('string'),
+              'insuranceExpiration': nullable('string', 'date'),
+              'ratePerMile': nullable('number'),
+              'companyAddress': nullable('string'),
+              'companyCity': nullable('string'),
+              'companyState': nullable('string'),
+              'companyZipCode': nullable('string'),
+              'factoringCompany': nullable('string'),
+              'factoringFee': nullable('number'),
+              'bankName': nullable('string'),
+              'accountHolder': nullable('string'),
+              'accountNumber': nullable('string'),
+              'routingNumber': nullable('string'),
+              'bankAddress': nullable('string'),
+              'bankCity': nullable('string'),
+              'bankState': nullable('string'),
+              'bankZipCode': nullable('string'),
+              'zelleAccount': nullable('string'),
+              'cashAppAccount': nullable('string'),
+              'operatingStates': array_of('string'),
+              'areaOfOperation': nullable('string'),
+              'serviceTypes': array_of('string'),
+              'weeklyMinimumAmount': nullable('number'),
+              'totalTripsPerWeek': nullable('integer'),
+              'lastLoad': nullable('string', 'date'),
+              'fleetEquipment': {
+                  'type': 'array',
+                  'items': {'type': 'object', 'additionalProperties': True},
+              },
+              'updatedAt': nullable('string', 'date-time'),
+          }
+          schemas['CrmContact']['properties'].update(contact_response_fields)
+
+          contact_input_fields = {}
+          for name, schema in contact_response_fields.items():
+              if name == 'updatedAt':
+                  continue
+              field = copy.deepcopy(schema)
+              if isinstance(field.get('type'), list):
+                  field['type'] = next(value for value in field['type'] if value != 'null')
+              contact_input_fields[name] = field
+          schemas['CrmContactInput']['properties'].update(contact_input_fields)
+          schemas['CrmContactUpdate'] = {
+              'type': 'object',
+              'properties': copy.deepcopy(schemas['CrmContactInput']['properties']),
+          }
+
+          schemas['Carrier']['properties']['bankAddress'] = nullable('string')
+          schemas['Carrier']['properties']['bankZip'] = nullable('string')
+
+          spec_path.write_text(
+              yaml.safe_dump(spec, sort_keys=False, allow_unicode=True, width=120)
+          )
+
+          hooks = {
+              'useListInvoices', 'useGetProfitLoss', 'useListTransactions',
+              'useListBrokers', 'useListCarriers', 'useListCrmContacts',
+              'useListCrmLeads', 'useListLoads',
+          }
+          option_keys = {
+              'queryKey', 'enabled', 'staleTime', 'gcTime', 'retry',
+              'refetchInterval', 'refetchOnWindowFocus',
+          }
+
+          def split_entries(body):
+              entries = []
+              depth = 0
+              current = []
+              for char in body:
+                  if char in '([{':
+                      depth += 1
+                  elif char in ')]}':
+                      depth -= 1
+                  if char == ',' and depth == 0:
+                      value = ''.join(current).strip()
+                      if value:
+                          entries.append(value)
+                      current = []
+                  else:
+                      current.append(char)
+              value = ''.join(current).strip()
+              if value:
+                  entries.append(value)
+              return entries
+
+          def transform_nested(text, hook):
+              pattern = re.compile(
+                  rf'{hook}\(\{{\s*query:\s*\{{(?P<body>.*?)\}}\s*(?:as\s+any\s*)?\}}\)',
+                  re.S,
+              )
+              def replacement(match):
+                  params = []
+                  options = []
+                  for entry in split_entries(match.group('body')):
+                      key = entry.split(':', 1)[0].strip()
+                      (options if key in option_keys else params).append(entry)
+                  params_text = '{ ' + ', '.join(params) + ' }'
+                  if not params:
+                      params_text = '{}'
+                  if options:
+                      return f"{hook}({params_text}, {{ query: {{ {', '.join(options)} }} }})"
+                  return f'{hook}({params_text})'
+              return pattern.sub(replacement, text)
+
+          for path in (root / 'apps/web/src').rglob('*.tsx'):
+              text = path.read_text()
+              original = text
+              for hook in hooks:
+                  text = transform_nested(text, hook)
+                  text = re.sub(
+                      rf'{hook}\(\{{\s*query:\s*(?!\{{)(.*?)\}}\)',
+                      rf'{hook}({{ search: \1}})',
+                      text,
+                      flags=re.S,
+                  )
+              if text != original:
+                  path.write_text(text)
+
+          def replace(path_name, old, new):
+              path = root / path_name
+              text = path.read_text()
+              if old in text:
+                  path.write_text(text.replace(old, new))
+
+          replace(
+              'apps/web/src/modules/accounting/components/InvoiceFormModal.tsx',
+              '    const carrier = carriersData?.data.find((c: any) => c.id === carrierId);\n'
+              '    const driverName = carrier?.driver?.name ?? carrier?.driverName ?? "";\n'
+              '    setForm((previous) => ({ ...previous, carrierId, driverName }));',
+              '    setForm((previous) => ({ ...previous, carrierId, driverName: "" }));',
+          )
+          replace(
+              'apps/web/src/modules/carriers/components/CarrierFormModal.tsx',
+              '        accountNumber: initialData.accountNumber ?? "",',
+              '        accountNumber: "",',
+          )
+          replace(
+              'apps/web/src/modules/carriers/components/CarrierFormModal.tsx',
+              '        routingNumber: initialData.routingNumber ?? "",',
+              '        routingNumber: "",',
+          )
+          replace(
+              'apps/web/src/modules/carriers/components/CarrierFormModal.tsx',
+              'contactsData?.contacts',
+              'contactsData?.data',
+          )
+          replace(
+              'apps/web/src/modules/crm/components/CarrierContactForm.tsx',
+              'import type { FleetEquipment } from "@workspace/db";',
+              'import type { FleetEquipment } from "../types/fleet-equipment";',
+          )
+          replace(
+              'apps/web/src/modules/crm/components/ContactFormModal.tsx',
+              '      services: config?.showServices ? prev.services : "",',
+              '      servicesProvided: config?.showServices ? prev.servicesProvided : "",',
+          )
+
+          driver_path = root / 'apps/web/src/modules/crm/components/DriverFormModal.tsx'
+          driver = driver_path.read_text()
+          driver = driver.replace(
+              'function C4({ children }: { children: React.ReactNode })',
+              'function C4({ children }: { children?: React.ReactNode })',
+          )
+          driver = driver.replace(
+              'function C6({ children }: { children: React.ReactNode })',
+              'function C6({ children }: { children?: React.ReactNode })',
+          )
+          driver_path.write_text(driver)
+
+          carrier_query_path = root / 'apps/web/src/modules/carriers/components/CarrierFormModal.tsx'
+          carrier_query = carrier_query_path.read_text()
+          carrier_query = re.sub(
+              r'useListCrmContacts\(\{\s*query:\s*\{\s*pageSize:\s*200\s*\}\s*as\s+any\s*\}\)',
+              'useListCrmContacts({ pageSize: 200 })',
+              carrier_query,
+          )
+          carrier_query_path.write_text(carrier_query)
+
+          carrier_files = [
+              'apps/web/src/modules/accounting/components/InvoicePDFPreview.tsx',
+              'apps/web/src/modules/accounting/components/InvoiceViewModal.tsx',
+              'apps/web/src/modules/accounting/pages/InvoiceDetailPage.tsx',
+          ]
+          for name in carrier_files:
+              path = root / name
+              text = path.read_text()
+              if 'getGetCarrierQueryKey' not in text:
+                  text = text.replace(
+                      'useGetCarrier,',
+                      'useGetCarrier, getGetCarrierQueryKey,',
+                  )
+                  text = text.replace(
+                      'useGetCarrier }',
+                      'useGetCarrier, getGetCarrierQueryKey }',
+                  )
+              text = re.sub(
+                  r'useGetCarrier\(([^,\n]+),\s*\{\s*enabled:\s*([^}]+)\}\)',
+                  r'useGetCarrier(\1, { query: { enabled: \2, queryKey: getGetCarrierQueryKey(\1) } })',
+                  text,
+              )
+              path.write_text(text)
+          PY
+
+      - name: Commit aligned contracts
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add packages/api-spec/openapi.yaml apps/web/src
+          if git diff --cached --quiet; then
+            echo "Contracts already aligned."
+            exit 0
+          fi
+          git commit -m "fix: align frontend models with OpenAPI contracts"
+          git push origin HEAD:dev
