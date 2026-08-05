@@ -1,6 +1,14 @@
 import { useState } from "react";
-import type { Invoice } from "@workspace/api-client-react";
-import { useGetLoad, useGetCarrier, getGetCarrierQueryKey, useGetCompanyProfile } from "@workspace/api-client-react";
+import {
+  getGetCarrierQueryKey,
+  useGetCarrier,
+  useGetCompanyProfile,
+  useGetLoad,
+} from "@workspace/api-client-react";
+import type {
+  Invoice,
+  LoadVehicle,
+} from "@workspace/api-client-react";
 import {
   Dialog,
   DialogContent,
@@ -9,77 +17,82 @@ import {
 } from "@/shared/components/ui/dialog";
 import { Button } from "@/shared/components/ui/button";
 import { StatusBadge } from "@/shared/components/ui/status-badge";
-import { formatCurrency, formatDate } from "@/shared/lib/utils";
 import { buildInvoiceDescription } from "@/shared/lib/invoice-utils";
+import { formatCurrency, formatDate } from "@/shared/lib/utils";
+import { FileDown, Pencil } from "lucide-react";
 import { InvoiceFormModal } from "./InvoiceFormModal";
 import { InvoicePDFPreview } from "./InvoicePDFPreview";
-import { Pencil, FileDown } from "lucide-react";
 
 interface Props {
   invoice: Invoice | null;
   onClose: () => void;
 }
 
-// ── helpers ───────────────────────────────────────────────────────────────────
+type InvoiceWithCommission = Invoice & {
+  subtotal?: number;
+  commissionRate?: number;
+};
 
-function Field({ label, value }: { label: string; value?: string | null }) {
-  if (!value) return null;
-  return <span className="block font-mono text-[11px]">{label ? `${value}` : value}</span>;
+function joinAddress(parts: Array<string | null | undefined>) {
+  return parts.filter(Boolean).join(", ");
 }
 
-// ── per-load row ──────────────────────────────────────────────────────────────
-
 function LinkedLoadRow({ loadId }: { loadId: string }) {
-  const { data: load, isLoading } = useGetLoad(loadId);
+  const loadQuery = useGetLoad(loadId);
+  const columns = "6rem minmax(0, 3fr) minmax(5rem, 1fr)";
 
-  const COL = "5rem 3fr 1fr";
-
-  if (isLoading) {
+  if (loadQuery.isLoading) {
     return (
-      <div className="grid gap-x-4 px-3 py-2 font-mono text-[11px] animate-pulse border-b border-border last:border-b-0"
-        style={{ gridTemplateColumns: COL }}>
-        <span className="text-muted-foreground">…</span><span /><span />
+      <div
+        className="grid animate-pulse gap-x-4 border-b border-border px-3 py-2 text-xs last:border-b-0"
+        style={{ gridTemplateColumns: columns }}
+      >
+        <span className="text-muted-foreground">Loading…</span>
+        <span />
+        <span />
       </div>
     );
   }
 
+  const load = loadQuery.data;
   if (!load) {
     return (
-      <div className="grid gap-x-4 px-3 py-2 font-mono text-[11px] text-destructive border-b border-border last:border-b-0"
-        style={{ gridTemplateColumns: COL }}>
+      <div
+        className="grid gap-x-4 border-b border-border px-3 py-2 text-xs text-destructive last:border-b-0"
+        style={{ gridTemplateColumns: columns }}
+      >
         <span>—</span>
         <span>{buildInvoiceDescription({ loadId })}</span>
-        <span>—</span>
+        <span className="text-right">—</span>
       </div>
     );
   }
 
-  const vehicles: any[] = (load as any).vehicles ?? [];
-  const rows = vehicles.length > 0 ? vehicles : [null];
-  const rate = parseFloat(String((load as any).rate ?? "0")) || 0;
-  const dispatchDate: string | null = (load as any).dispatchDate ?? null;
+  const vehicles: Array<LoadVehicle | null> = load.vehicles?.length
+    ? load.vehicles
+    : [null];
 
   return (
     <>
-      {rows.map((v: any, i: number) => (
+      {vehicles.map((vehicle, index) => (
         <div
-          key={i}
-          className="grid gap-x-4 px-3 py-2 font-mono text-[11px] items-center border-b border-border last:border-b-0"
-          style={{ gridTemplateColumns: COL }}
+          key={`${load.id}-${vehicle?.vehicleNumber ?? index}`}
+          className="grid items-center gap-x-4 border-b border-border px-3 py-2 text-xs last:border-b-0"
+          style={{ gridTemplateColumns: columns }}
         >
-          <span className={`text-muted-foreground ${i > 0 ? "opacity-0 select-none" : ""}`}>
-            {i === 0 ? (dispatchDate ? formatDate(dispatchDate) : "—") : ""}
+          <span className={index > 0 ? "select-none opacity-0" : "text-muted-foreground"}>
+            {index === 0 ? formatDate(load.dispatchDate) : ""}
           </span>
-          <span className="truncate text-foreground">
+          <span className="truncate font-medium">
             {buildInvoiceDescription({
-              loadId: (load as any).loadId,
-              year: v?.year,
-              make: v?.make,
-              model: v?.model,
+              loadId: load.loadId,
+              year: vehicle?.year,
+              make: vehicle?.make,
+              model: vehicle?.model,
             })}
           </span>
-          <span className={`font-bold text-primary ${i > 0 ? "opacity-0 select-none" : ""}`}>
-            {i === 0 ? formatCurrency(rate) : ""}
+          <span className={index > 0 ? "select-none opacity-0" : "text-right font-bold"}>
+            {index === 0 ? formatCurrency(load.rate) : ""}
           </span>
         </div>
       ))}
@@ -87,221 +100,248 @@ function LinkedLoadRow({ loadId }: { loadId: string }) {
   );
 }
 
-// ── Bill To ───────────────────────────────────────────────────────────────────
-
 function BillToSection({ carrierId }: { carrierId?: string | null }) {
-  const { data: carrier, isLoading } = useGetCarrier(carrierId ?? "", {
-    query: { enabled: !!carrierId, queryKey: getGetCarrierQueryKey(carrierId ?? "") },
+  const resolvedCarrierId = carrierId ?? "";
+  const carrierQuery = useGetCarrier(resolvedCarrierId, {
+    query: {
+      enabled: Boolean(resolvedCarrierId),
+      queryKey: getGetCarrierQueryKey(resolvedCarrierId),
+    },
   });
+  const carrier = carrierQuery.data;
 
   return (
-    <div className="flex flex-col gap-1">
-      <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground mb-1">Bill To</p>
-      {isLoading ? (
-        <span className="font-mono text-xs text-muted-foreground animate-pulse">Loading…</span>
-      ) : !carrier ? (
-        <span className="font-mono text-xs text-destructive">No billing recipient</span>
-      ) : (
-        <div className="font-mono text-[11px] space-y-0.5">
-          <span className="block font-bold text-foreground text-xs">{carrier.companyName}</span>
-          <Field label="" value={carrier.primaryContact} />
-          {carrier.companyAddress && (
-            <span className="block text-muted-foreground">{carrier.companyAddress}</span>
-          )}
-          {(carrier.companyCity || carrier.companyState || (carrier as any).companyZip) && (
-            <span className="block text-muted-foreground">
-              {[carrier.companyCity, carrier.companyState, (carrier as any).companyZip]
-                .filter(Boolean)
-                .join(", ")}
-            </span>
-          )}
-          <Field label="" value={carrier.phone} />
-          <Field label="" value={carrier.email} />
+    <section className="border border-border bg-card p-4">
+      <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+        Bill To
+      </p>
+      {carrierQuery.isLoading ? (
+        <p className="text-sm text-muted-foreground">Loading billing recipient…</p>
+      ) : carrier ? (
+        <div className="space-y-1 text-sm">
+          <p className="font-semibold">{carrier.companyName}</p>
+          <p className="text-muted-foreground">
+            {carrier.primaryContact ?? "Primary contact not configured"}
+          </p>
+          <p className="text-muted-foreground">
+            {joinAddress([
+              carrier.companyAddress,
+              carrier.companyCity,
+              carrier.companyState,
+              carrier.companyZip,
+            ]) || "Address not configured"}
+          </p>
+          <p className="text-muted-foreground">
+            {carrier.email ?? carrier.phone ?? "Contact details not configured"}
+          </p>
         </div>
+      ) : (
+        <p className="text-sm text-destructive">Billing recipient not available.</p>
       )}
-    </div>
+    </section>
   );
 }
-
-// ── Pay To ────────────────────────────────────────────────────────────────────
 
 function PayToSection() {
-  const { data: company, isLoading } = useGetCompanyProfile();
+  const companyQuery = useGetCompanyProfile();
+  const company = companyQuery.data;
 
   return (
-    <div className="flex flex-col gap-1">
-      <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground mb-1">Pay To</p>
-      {isLoading ? (
-        <span className="font-mono text-xs text-muted-foreground animate-pulse">Loading…</span>
-      ) : !company ? (
-        <span className="font-mono text-xs text-muted-foreground">—</span>
+    <section className="border border-border bg-card p-4">
+      <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+        Pay To
+      </p>
+      {companyQuery.isLoading ? (
+        <p className="text-sm text-muted-foreground">Loading company profile…</p>
       ) : (
-        <div className="font-mono text-[11px] space-y-0.5">
-          <span className="block font-bold text-foreground text-xs">{company.companyName ?? "LANDER DISPATCH"}</span>
-          {company.streetAddress && (
-            <span className="block text-muted-foreground">{company.streetAddress}</span>
-          )}
-          {(company.city || company.state || company.zipCode) && (
-            <span className="block text-muted-foreground">
-              {[company.city, company.state, company.zipCode].filter(Boolean).join(", ")}
-            </span>
-          )}
-          <Field label="" value={company.companyPhone} />
-          <Field label="" value={company.companyEmail} />
-          <Field label="" value={company.website} />
+        <div className="space-y-1 text-sm">
+          <p className="font-semibold">
+            {company?.legalCompanyName || company?.companyName || "Lander Dispatch"}
+          </p>
+          <p className="text-muted-foreground">
+            {joinAddress([
+              company?.streetAddress,
+              company?.city,
+              company?.state,
+              company?.zipCode,
+              company?.country,
+            ]) || "Address not configured"}
+          </p>
+          <p className="text-muted-foreground">
+            {company?.companyEmail ?? company?.companyPhone ?? "Contact details not configured"}
+          </p>
+          {company?.website ? <p className="text-muted-foreground">{company.website}</p> : null}
         </div>
       )}
-    </div>
+    </section>
   );
 }
-
-// ── main component ─────────────────────────────────────────────────────────────
 
 export function InvoiceViewModal({ invoice, onClose }: Props) {
   const [editing, setEditing] = useState(false);
-  const [showPDF, setShowPDF] = useState(false);
-  if (!invoice) return null;
+  const [showPdf, setShowPdf] = useState(false);
 
-  if (showPDF) {
-    return <InvoicePDFPreview invoice={invoice} onClose={() => setShowPDF(false)} />;
+  if (!invoice) return null;
+  if (showPdf) {
+    return <InvoicePDFPreview invoice={invoice} onClose={() => setShowPdf(false)} />;
   }
 
-  const d = invoice as any;
-  const subtotal: number = Number(d.subtotal ?? 0);
-  const commissionRate: number = Number(d.commissionRate ?? 0);
-  const commissionAmount: number = Number(invoice.total ?? 0);
+  const invoiceData = invoice as InvoiceWithCommission;
+  const subtotal = invoiceData.subtotal ?? 0;
+  const commissionRate = invoiceData.commissionRate ?? 0;
+  const loadIds = invoice.loadIds ?? [];
 
   return (
     <>
-      <Dialog open={!!invoice && !editing} onOpenChange={(v) => !v && onClose()}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <Dialog open={!editing} onOpenChange={(value) => !value && onClose()}>
+        <DialogContent className="max-h-[92vh] max-w-3xl overflow-y-auto">
           <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle className="font-mono uppercase tracking-widest text-sm">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <DialogTitle className="text-base font-semibold">
                 Invoice — {invoice.invoiceNumber}
               </DialogTitle>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" className="gap-1 font-mono text-xs" onClick={() => setShowPDF(true)}>
-                  <FileDown className="w-3 h-3" /> PDF
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" className="gap-2" onClick={() => setShowPdf(true)}>
+                  <FileDown className="h-4 w-4" />
+                  PDF
                 </Button>
-                <Button variant="outline" size="sm" className="gap-1 font-mono text-xs" onClick={() => setEditing(true)}>
-                  <Pencil className="w-3 h-3" /> Edit
+                <Button variant="outline" size="sm" className="gap-2" onClick={() => setEditing(true)}>
+                  <Pencil className="h-4 w-4" />
+                  Edit
                 </Button>
               </div>
             </div>
           </DialogHeader>
 
-          <div className="mt-2 space-y-5">
+          <div className="space-y-6">
+            <section className="grid grid-cols-2 gap-4 md:grid-cols-4">
+              <InfoField label="Invoice #" value={invoice.invoiceNumber} />
+              <div>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Status</p>
+                <div className="mt-1">
+                  <StatusBadge status={invoice.status} />
+                </div>
+              </div>
+              <InfoField label="Issue Date" value={formatDate(invoice.issueDate)} />
+              <InfoField label="Due Date" value={formatDate(invoice.dueDate)} />
+            </section>
 
-            {/* §8.2 — Invoice Information */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-0.5">
-                <span className="font-mono text-[9px] uppercase text-muted-foreground">Invoice #</span>
-                <span className="font-mono text-sm font-bold">{invoice.invoiceNumber}</span>
-              </div>
-              <div className="flex flex-col gap-0.5">
-                <span className="font-mono text-[9px] uppercase text-muted-foreground">Status</span>
-                <StatusBadge status={invoice.status} />
-              </div>
-              <div className="flex flex-col gap-0.5">
-                <span className="font-mono text-[9px] uppercase text-muted-foreground">Issue Date</span>
-                <span className="font-mono text-sm">{formatDate(invoice.issueDate)}</span>
-              </div>
-              <div className="flex flex-col gap-0.5">
-                <span className="font-mono text-[9px] uppercase text-muted-foreground">Due Date</span>
-                <span className="font-mono text-sm">{formatDate(invoice.dueDate)}</span>
-              </div>
-            </div>
-
-            {/* §8.3 — Bill To | Pay To */}
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 border border-border p-4 bg-muted/20">
-              <BillToSection carrierId={d.carrierId} />
+            <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <BillToSection carrierId={invoice.carrierId} />
               <PayToSection />
-            </div>
+            </section>
 
-            {/* §8.4 — Invoice Items */}
-            <div>
-              <p className="mb-2 font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
-                Invoice Items{d.loadIds?.length > 0 ? ` — ${d.loadIds.length} load${d.loadIds.length > 1 ? "s" : ""}` : ""}
-              </p>
-              {d.loadIds && d.loadIds.length > 0 ? (
+            <section>
+              <div className="mb-2 flex items-end justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                    Invoice Items
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {loadIds.length} load{loadIds.length === 1 ? "" : "s"} linked
+                  </p>
+                </div>
+              </div>
+
+              {loadIds.length ? (
                 <div className="overflow-hidden border border-border">
                   <div
-                    className="grid gap-x-4 border-b border-border bg-muted/50 px-3 py-1.5 font-mono text-[9px] uppercase text-muted-foreground"
-                    style={{ gridTemplateColumns: "5rem 3fr 1fr" }}
+                    className="grid gap-x-4 border-b border-border bg-muted/50 px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground"
+                    style={{ gridTemplateColumns: "6rem minmax(0, 3fr) minmax(5rem, 1fr)" }}
                   >
                     <span>Date</span>
                     <span>Description</span>
-                    <span>Rate</span>
+                    <span className="text-right">Rate</span>
                   </div>
-                  {d.loadIds.map((id: string) => (
-                    <LinkedLoadRow key={id} loadId={id} />
+                  {loadIds.map((loadId) => (
+                    <LinkedLoadRow key={loadId} loadId={loadId} />
                   ))}
                 </div>
               ) : (
-                <p className="font-mono text-xs text-muted-foreground">No loads linked.</p>
+                <div className="border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+                  No loads linked to this invoice.
+                </div>
               )}
-            </div>
+            </section>
 
-            {/* §8.5 — Totals / Commission */}
-            <div className="rounded border border-border bg-muted/30 p-4">
-              <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground mb-3">Commission</p>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="flex flex-col gap-0.5">
-                  <span className="font-mono text-[9px] uppercase text-muted-foreground">
-                    Subtotal ({d.loadIds?.length ?? 0} {(d.loadIds?.length ?? 0) === 1 ? "load" : "loads"})
-                  </span>
-                  <span className="font-mono text-sm font-medium">{formatCurrency(subtotal)}</span>
-                </div>
-                <div className="flex flex-col gap-0.5">
-                  <span className="font-mono text-[9px] uppercase text-muted-foreground">Commission %</span>
-                  <span className="font-mono text-sm font-medium">{commissionRate > 0 ? `${commissionRate}%` : "—"}</span>
-                </div>
-                <div className="flex flex-col gap-0.5">
-                  <span className="font-mono text-[9px] uppercase text-muted-foreground">Total Commission</span>
-                  <span className="font-mono text-sm font-bold text-primary">{formatCurrency(commissionAmount)}</span>
-                </div>
-              </div>
-            </div>
+            <section className="grid grid-cols-1 gap-4 border border-border bg-muted/20 p-4 sm:grid-cols-3">
+              <InfoField
+                label={`Subtotal (${loadIds.length} load${loadIds.length === 1 ? "" : "s"})`}
+                value={formatCurrency(subtotal)}
+              />
+              <InfoField
+                label="Commission"
+                value={commissionRate > 0 ? `${commissionRate.toFixed(2)}%` : "—"}
+              />
+              <InfoField label="Total Commission" value={formatCurrency(invoice.total)} emphasized />
+            </section>
 
-            {/* §8.6 — Payment History */}
-            {invoice.payments && invoice.payments.length > 0 && (
-              <div>
-                <p className="mb-2 font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
-                  Payment History ({invoice.payments.length})
+            <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <InfoField label="Total" value={formatCurrency(invoice.total)} />
+              <InfoField label="Amount Paid" value={formatCurrency(invoice.amountPaid)} />
+              <InfoField label="Balance" value={formatCurrency(invoice.balance)} emphasized />
+            </section>
+
+            {invoice.payments?.length ? (
+              <section>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                  Payment History
                 </p>
-                <div className="space-y-1">
-                  {invoice.payments.map((pmt, i) => (
-                    <div key={i} className="flex items-center justify-between text-xs font-mono border border-border px-3 py-2">
-                      <span>{formatDate(pmt.paymentDate)}</span>
-                      <span>{pmt.paymentMethod}</span>
-                      {pmt.reference && <span className="text-muted-foreground">{pmt.reference}</span>}
-                      <span className="font-bold">{formatCurrency(pmt.amount)}</span>
+                <div className="divide-y divide-border border border-border">
+                  {invoice.payments.map((payment) => (
+                    <div
+                      key={payment.id}
+                      className="grid grid-cols-2 gap-2 px-3 py-2 text-xs sm:grid-cols-4"
+                    >
+                      <span>{formatDate(payment.paymentDate)}</span>
+                      <span>{payment.paymentMethod}</span>
+                      <span className="text-muted-foreground">{payment.reference || "—"}</span>
+                      <span className="text-right font-semibold">{formatCurrency(payment.amount)}</span>
                     </div>
                   ))}
                 </div>
+              </section>
+            ) : null}
+
+            <section>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                Notes
+              </p>
+              <div className="min-h-16 border border-border bg-muted/10 p-3 text-sm whitespace-pre-wrap">
+                {invoice.notes || "No notes."}
               </div>
-            )}
-
-            {/* §8.8 — Bank Details */}
-            <div>
-              <p className="mb-1 font-mono text-[9px] uppercase tracking-widest text-muted-foreground">Bank Details</p>
-              {invoice.notes ? (
-                <p className="text-sm whitespace-pre-wrap font-mono">{invoice.notes}</p>
-              ) : (
-                <p className="text-sm text-muted-foreground font-mono">—</p>
-              )}
-            </div>
-
+            </section>
           </div>
         </DialogContent>
       </Dialog>
 
       <InvoiceFormModal
         open={editing}
-        onClose={() => { setEditing(false); onClose(); }}
+        onClose={() => {
+          setEditing(false);
+          onClose();
+        }}
         initialData={invoice}
       />
     </>
+  );
+}
+
+function InfoField({
+  label,
+  value,
+  emphasized = false,
+}: {
+  label: string;
+  value: string;
+  emphasized?: boolean;
+}) {
+  return (
+    <div>
+      <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className={emphasized ? "mt-1 text-base font-bold text-primary" : "mt-1 text-sm font-semibold"}>
+        {value}
+      </p>
+    </div>
   );
 }
