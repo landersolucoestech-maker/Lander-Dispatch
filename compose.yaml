@@ -30,6 +30,7 @@ services:
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_API_CORS_ALLOW_ORIGIN: http://127.0.0.1:3000,http://localhost:3000
     ports:
       - "127.0.0.1:9000:9000"
       - "127.0.0.1:9001:9001"
@@ -60,22 +61,8 @@ services:
         mc mb --ignore-existing local/lander-dispatch-public
         mc anonymous set none local/lander-dispatch-private
         mc anonymous set none local/lander-dispatch-public
-        cat > /tmp/private-cors.xml <<'EOF'
-        <CORSConfiguration>
-          <CORSRule>
-            <AllowedOrigin>http://127.0.0.1:3000</AllowedOrigin>
-            <AllowedOrigin>http://localhost:3000</AllowedOrigin>
-            <AllowedMethod>GET</AllowedMethod>
-            <AllowedMethod>HEAD</AllowedMethod>
-            <AllowedMethod>PUT</AllowedMethod>
-            <AllowedHeader>*</AllowedHeader>
-            <ExposeHeader>ETag</ExposeHeader>
-            <MaxAgeSeconds>3600</MaxAgeSeconds>
-          </CORSRule>
-        </CORSConfiguration>
-        EOF
-        mc cors set local/lander-dispatch-private /tmp/private-cors.xml
-        mc cors get local/lander-dispatch-private
+        mc anonymous get local/lander-dispatch-private
+        mc anonymous get local/lander-dispatch-public
     networks:
       - lander_dispatch_local
 
