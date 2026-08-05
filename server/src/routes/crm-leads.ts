@@ -199,28 +199,34 @@ router.patch("/crm/leads/:leadId", async (req, res): Promise<void> => {
     return;
   }
 
-  const data = parsed.data;
+  const {
+    rating,
+    estimatedWeeklyRevenue,
+    state,
+    operatingStates,
+    ...rest
+  } = parsed.data;
   const updateData: Partial<typeof crmLeadsTable.$inferInsert> = {
-    ...data,
+    ...rest,
     updatedAt: new Date(),
   };
 
-  if (data.state !== undefined) {
-    updateData.state = data.state?.toUpperCase() ?? null;
+  if (state !== undefined) {
+    updateData.state = state?.toUpperCase() ?? null;
   }
-  if (data.operatingStates !== undefined) {
-    updateData.operatingStates = data.operatingStates.map((state) =>
-      state.toUpperCase(),
+  if (operatingStates !== undefined) {
+    updateData.operatingStates = operatingStates.map((item) =>
+      item.toUpperCase(),
     );
   }
-  if (data.rating !== undefined) {
-    updateData.rating = data.rating == null ? null : String(data.rating);
+  if (rating !== undefined) {
+    updateData.rating = rating == null ? null : String(rating);
   }
-  if (data.estimatedWeeklyRevenue !== undefined) {
+  if (estimatedWeeklyRevenue !== undefined) {
     updateData.estimatedWeeklyRevenue =
-      data.estimatedWeeklyRevenue == null
+      estimatedWeeklyRevenue == null
         ? null
-        : String(data.estimatedWeeklyRevenue);
+        : String(estimatedWeeklyRevenue);
   }
 
   const [lead] = await db
