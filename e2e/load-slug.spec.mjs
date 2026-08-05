@@ -57,10 +57,14 @@ test("loads a deterministic operational Load with route, parties and vehicle", a
   ).toBeVisible();
 
   const vehicles = page
-    .getByRole("heading", { name: "Vehicles (1)" })
+    .getByRole("heading", { name: /^Vehicles \(1\)$/ })
     .locator("xpath=ancestor::section");
   await expect(
-    vehicles.getByRole("heading", { name: "2022 Toyota Highlander XLE" }),
+    vehicles.getByRole("heading", {
+      name: "2022 Toyota Highlander XLE",
+      level: 3,
+      exact: true,
+    }),
   ).toBeVisible();
   await expect(
     vehicles.getByText("5TDGZRBH2NS100001", { exact: true }),
