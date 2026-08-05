@@ -161,6 +161,11 @@ jobs:
           API_BASE_URL: http://127.0.0.1:5000
         run: node ./scripts/ci-crm-contact-smoke.mjs
 
+      - name: Run dashboard accounting and alert smoke test
+        env:
+          API_BASE_URL: http://127.0.0.1:5000
+        run: node ./scripts/ci-dashboard-smoke.mjs
+
       - name: Restart API with authentication required
         shell: bash
         env:
