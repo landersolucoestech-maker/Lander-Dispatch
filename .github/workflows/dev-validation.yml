@@ -156,6 +156,11 @@ jobs:
           API_BASE_URL: http://127.0.0.1:5000
         run: node ./scripts/ci-crm-lead-smoke.mjs
 
+      - name: Run generic CRM Contact domain smoke test
+        env:
+          API_BASE_URL: http://127.0.0.1:5000
+        run: node ./scripts/ci-crm-contact-smoke.mjs
+
       - name: Restart API with authentication required
         shell: bash
         env:
