@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 
 import { requireAuthenticated } from "../middlewares/authMiddleware";
+import { auditMutationMiddleware } from "../middlewares/auditMutationMiddleware";
 import accountingRouter from "./accounting";
 import auditRouter from "./audit";
 import authRouter from "./auth";
@@ -23,6 +24,7 @@ const router: IRouter = Router();
 router.use(healthRouter);
 router.use(authRouter);
 router.use(requireAuthenticated);
+router.use(auditMutationMiddleware);
 router.use(dashboardRouter);
 router.use(carriersRouter);
 router.use(brokersRouter);
