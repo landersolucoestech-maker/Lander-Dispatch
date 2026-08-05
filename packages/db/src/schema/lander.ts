@@ -1,16 +1,6 @@
-import {
-  pgTable,
-  text,
-  integer,
-  numeric,
-  boolean,
-  timestamp,
-  date,
-  uuid,
-  json,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, uuid, integer, numeric, date, boolean, json, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
-import { z } from "zod/v4";
+import { z } from "zod";
 
 // ── Carriers ──────────────────────────────────────────────────────────────────
 export const carriersTable = pgTable("carriers", {
@@ -64,35 +54,28 @@ export const insertCarrierSchema = createInsertSchema(carriersTable).omit({ id: 
 export type InsertCarrier = z.infer<typeof insertCarrierSchema>;
 export type Carrier = typeof carriersTable.$inferSelect;
 
-// ── Carrier Fleet ─────────────────────────────────────────────────────────────
+// ── Carrier Fleet Equipment ───────────────────────────────────────────────────
 export const carrierFleetTable = pgTable("carrier_fleet", {
   id: uuid("id").defaultRandom().primaryKey(),
   carrierId: uuid("carrier_id").references(() => carriersTable.id, { onDelete: "cascade" }).notNull(),
   sortOrder: integer("sort_order").notNull().default(0),
-  // Truck
   truckYear: text("truck_year"),
   truckMake: text("truck_make"),
   truckModel: text("truck_model"),
   truckVin: text("truck_vin"),
   truckColor: text("truck_color"),
   truckPlateNumber: text("truck_plate_number"),
-  // Trailer
   trailerYear: text("trailer_year"),
   trailerMake: text("trailer_make"),
   trailerModel: text("trailer_model"),
   trailerVin: text("trailer_vin"),
   trailerColor: text("trailer_color"),
   trailerPlateNumber: text("trailer_plate_number"),
-  // Driver
   driverName: text("driver_name"),
   driverPhone: text("driver_phone"),
   driverEmail: text("driver_email"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
-
-export const insertCarrierFleetSchema = createInsertSchema(carrierFleetTable).omit({ id: true, createdAt: true });
-export type InsertCarrierFleet = z.infer<typeof insertCarrierFleetSchema>;
-export type CarrierFleet = typeof carrierFleetTable.$inferSelect;
 
 // ── Brokers ───────────────────────────────────────────────────────────────────
 export const brokersTable = pgTable("brokers", {
@@ -134,7 +117,7 @@ export const loadsTable = pgTable("loads", {
   loadId: text("load_id").notNull().unique(),
   carrierId: uuid("carrier_id").references(() => carriersTable.id),
   brokerId: uuid("broker_id").references(() => brokersTable.id),
-  status: text("status").notNull().default("Dispatched"),
+  status: text("status").notNull().default("New"),
   dispatchDate: date("dispatch_date"),
   pickupName: text("pickup_name"),
   pickupAddress: text("pickup_address"),
@@ -156,14 +139,14 @@ export const loadsTable = pgTable("loads", {
   deliveryEmail: text("delivery_email"),
   deliveryEstimated: date("delivery_estimated"),
   deliveryDeadline: date("delivery_deadline"),
-  miles: numeric("miles", { precision: 10, scale: 2 }),
+  miles: numeric("miles", { precision: 12, scale: 2 }),
   rate: numeric("rate", { precision: 14, scale: 2 }),
   carrierPay: numeric("carrier_pay", { precision: 14, scale: 2 }),
   fuelSurcharge: numeric("fuel_surcharge", { precision: 14, scale: 2 }),
   ratePerMile: numeric("rate_per_mile", { precision: 12, scale: 4 }),
   freightType: text("freight_type"),
   equipmentType: text("equipment_type"),
-  weight: numeric("weight", { precision: 10, scale: 2 }),
+  weight: numeric("weight", { precision: 12, scale: 2 }),
   paymentMethod: text("payment_method"),
   paymentStatus: text("payment_status"),
   dispatchInstructions: text("dispatch_instructions"),
@@ -202,21 +185,18 @@ export type LoadVehicle = typeof loadVehiclesTable.$inferSelect;
 // ── Fleet Equipment (carrier contact, flat-field structure) ───────────────────
 export interface FleetEquipment {
   id: string;
-  // Truck
   truckYear: string;
   truckMake: string;
   truckModel: string;
   truckVin: string;
   truckColor: string;
   truckPlate: string;
-  // Trailer
   trailerYear: string;
   trailerMake: string;
   trailerModel: string;
   trailerVin: string;
   trailerColor: string;
   trailerPlate: string;
-  // Assigned Driver
   assignedDriverId?: string;
   assignedDriverName: string;
   assignedDriverPhoneNumber: string;
@@ -235,31 +215,26 @@ export const crmContactsTable = pgTable("crm_contacts", {
   status: text("status").notNull().default("Active"),
   priority: text("priority"),
   rating: numeric("rating", { precision: 3, scale: 1 }),
-  // ── Primary Contact ──
   primaryContactName: text("primary_contact_name"),
   primaryPhoneNumber: text("primary_phone_number"),
   primaryPhoneNumber2: text("primary_phone_number_2"),
   email: text("email"),
   website: text("website"),
-  // ── Emergency Contact ──
   emergencyContactName: text("emergency_contact_name"),
   emergencyPhoneNumber: text("emergency_phone_number"),
   emergencyPhoneNumber2: text("emergency_phone_number_2"),
-  // ── Address (generic) ──
   streetAddress: text("street_address"),
   city: text("city"),
   state: text("state"),
   zipCode: text("zip_code"),
-  // ── Service Profile (generic non-carrier/broker) ──
   coverageArea: text("coverage_area"),
   businessHours: text("business_hours"),
   emergencyService: boolean("emergency_service"),
   services: text("services"),
-  // ── Broker-specific ──
   brokerType: text("broker_type"),
   mcNumber: text("mc_number"),
   usdotNumber: text("usdot_number"),
-  coverage: text("coverage"),               // legacy — no longer used in forms
+  coverage: text("coverage"),
   freightTypes: json("freight_types").$type<string[]>().default([]),
   coverageStates: json("coverage_states").$type<string[]>().default([]),
   paymentTerms: text("payment_terms"),
@@ -269,7 +244,6 @@ export const crmContactsTable = pgTable("crm_contacts", {
   factoringAccepted: text("factoring_accepted"),
   factoringConditions: text("factoring_conditions"),
   onboardingStatus: text("onboarding_status"),
-  // ── Carrier-specific ──
   carrierType: text("carrier_type"),
   einNumber: text("ein_number"),
   authorityStatus: text("authority_status"),
@@ -298,7 +272,6 @@ export const crmContactsTable = pgTable("crm_contacts", {
   totalTripsPerWeek: integer("total_trips_per_week"),
   lastLoad: date("last_load"),
   fleetEquipment: json("fleet_equipment").$type<FleetEquipment[]>().default([]),
-  // ── Internal Management ──
   lastContact: date("last_contact"),
   tags: json("tags").$type<string[]>().default([]),
   notes: text("notes"),
@@ -309,7 +282,6 @@ export const crmContactsTable = pgTable("crm_contacts", {
 // ── Drivers ───────────────────────────────────────────────────────────────────
 export const driversTable = pgTable("drivers", {
   id: uuid("id").defaultRandom().primaryKey(),
-  // 12.1 Driver Information
   fullName: text("full_name").notNull(),
   status: text("status").notNull().default("Active"),
   dateOfBirth: date("date_of_birth"),
@@ -319,7 +291,6 @@ export const driversTable = pgTable("drivers", {
   emergencyContactName: text("emergency_contact_name"),
   emergencyPhoneNumber: text("emergency_phone_number"),
   emergencyPhoneNumber2: text("emergency_phone_number_2"),
-  // 12.2 Address and Employment
   streetAddress: text("street_address"),
   city: text("city"),
   state: text("state"),
@@ -329,7 +300,6 @@ export const driversTable = pgTable("drivers", {
   employmentType: text("employment_type"),
   yearsOfExperience: integer("years_of_experience"),
   assignedEquipmentId: uuid("assigned_equipment_id"),
-  // 12.3 Driver License
   driverLicenseNumber: text("driver_license_number"),
   driverLicenseState: text("driver_license_state"),
   driverLicenseClass: text("driver_license_class"),
@@ -342,7 +312,6 @@ export const driversTable = pgTable("drivers", {
   cdlRestrictions: text("cdl_restrictions"),
   hazmatEndorsement: boolean("hazmat_endorsement").default(false),
   hazmatEndorsementExpiration: date("hazmat_endorsement_expiration"),
-  // 12.4 Medical, TWIC and Registry
   medicalExaminerCertificateNumber: text("medical_examiner_certificate_number"),
   medicalCardIssueDate: date("medical_card_issue_date"),
   medicalCardExpiration: date("medical_card_expiration"),
@@ -351,13 +320,11 @@ export const driversTable = pgTable("drivers", {
   twicCardNumber: text("twic_card_number"),
   twicCardExpiration: date("twic_card_expiration"),
   driverQualificationFileStatus: text("driver_qualification_file_status"),
-  // 12.5 MVR and Background Check
   mvrCheckDate: date("mvr_check_date"),
   mvrNextReviewDate: date("mvr_next_review_date"),
   mvrStatus: text("mvr_status"),
   backgroundCheckDate: date("background_check_date"),
   backgroundCheckStatus: text("background_check_status"),
-  // 12.6 Drug, Alcohol and Clearinghouse
   drugTestDate: date("drug_test_date"),
   drugTestResult: text("drug_test_result"),
   alcoholTestDate: date("alcohol_test_date"),
@@ -366,17 +333,14 @@ export const driversTable = pgTable("drivers", {
   clearinghouseLastQueryDate: date("clearinghouse_last_query_date"),
   clearinghouseNextQueryDate: date("clearinghouse_next_query_date"),
   complianceStatus: text("compliance_status"),
-  // 12.7 Safety History
   accidentHistory: text("accident_history"),
   violationHistory: text("violation_history"),
-  // 12.9 Assignments (largely derived / read-only)
   assignedCarrierId: uuid("assigned_carrier_id"),
   assignedTruckId: uuid("assigned_truck_id"),
   assignedTrailerId: uuid("assigned_trailer_id"),
   lastLoad: date("last_load"),
   totalLoads: integer("total_loads").default(0),
   lastAssignmentDate: date("last_assignment_date"),
-  // Internal
   notes: text("notes"),
   tags: json("tags").$type<string[]>().default([]),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
@@ -387,7 +351,6 @@ export const insertCrmContactSchema = createInsertSchema(crmContactsTable).omit(
 export type InsertCrmContact = z.infer<typeof insertCrmContactSchema>;
 export type CrmContact = typeof crmContactsTable.$inferSelect;
 
-
 // ── CRM Leads ─────────────────────────────────────────────────────────────────
 export const crmLeadsTable = pgTable("crm_leads", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -397,37 +360,32 @@ export const crmLeadsTable = pgTable("crm_leads", {
   phone: text("phone"),
   email: text("email"),
   website: text("website"),
-  // ── Address ──
   streetAddress: text("street_address"),
   city: text("city"),
   state: text("state"),
   zipCode: text("zip_code"),
-  // ── Broker-specific (lightweight prospecton) ──
   brokerType: text("broker_type"),
   mcNumber: text("mc_number"),
   usdotNumber: text("usdot_number"),
   coverage: text("coverage"),
   freightTypes: text("freight_types"),
   selectedStates: text("selected_states"),
-  // ── Demand Profile ──
   serviceTypes: json("service_types").$type<string[]>().default([]),
   operatingStates: json("operating_states").$type<string[]>().default([]),
   estimatedWeeklyLoads: integer("estimated_weekly_loads"),
   estimatedWeeklyRevenue: numeric("estimated_weekly_revenue", { precision: 14, scale: 2 }),
-  // ── Lead Info ──
   leadSource: text("lead_source"),
   pipelineStage: text("pipeline_stage").notNull().default("New Lead"),
   priority: text("priority"),
   rating: numeric("rating", { precision: 3, scale: 1 }),
   status: text("status").notNull().default("Active"),
-  // ── Follow-Up ──
   nextFollowUpDate: date("next_follow_up_date"),
   nextFollowUpTime: text("next_follow_up_time"),
   followUpNotes: text("follow_up_notes"),
   lastContact: date("last_contact"),
-  // ── Conversion ──
   convertedCarrierId: uuid("converted_carrier_id").references(() => carriersTable.id),
-  // ── Internal ──
+  convertedEntityType: text("converted_entity_type"),
+  convertedEntityId: uuid("converted_entity_id"),
   tags: json("tags").$type<string[]>().default([]),
   notes: text("notes"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
@@ -438,7 +396,6 @@ export const insertCrmLeadSchema = createInsertSchema(crmLeadsTable).omit({ id: 
 export type InsertCrmLead = z.infer<typeof insertCrmLeadSchema>;
 export type CrmLead = typeof crmLeadsTable.$inferSelect;
 
-// ── CRM Lead Fleet ────────────────────────────────────────────────────────────
 export const crmLeadFleetTable = pgTable("crm_lead_fleet", {
   id: uuid("id").defaultRandom().primaryKey(),
   leadId: uuid("lead_id").references(() => crmLeadsTable.id, { onDelete: "cascade" }).notNull(),
@@ -486,14 +443,12 @@ export const insertInvoiceSchema = createInsertSchema(invoicesTable).omit({ id: 
 export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
 export type Invoice = typeof invoicesTable.$inferSelect;
 
-// ── Invoice Loads ─────────────────────────────────────────────────────────────
 export const invoiceLoadsTable = pgTable("invoice_loads", {
   id: uuid("id").defaultRandom().primaryKey(),
   invoiceId: uuid("invoice_id").references(() => invoicesTable.id).notNull(),
   loadId: uuid("load_id").references(() => loadsTable.id).notNull(),
 });
 
-// ── Invoice Payments ──────────────────────────────────────────────────────────
 export const invoicePaymentsTable = pgTable("invoice_payments", {
   id: uuid("id").defaultRandom().primaryKey(),
   invoiceId: uuid("invoice_id").references(() => invoicesTable.id).notNull(),
