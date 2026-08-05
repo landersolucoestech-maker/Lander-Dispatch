@@ -19,7 +19,7 @@ jobs:
   validate:
     name: Static and runtime validation
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 50
     env:
       NODE_ENV: development
       APP_ENV: development
@@ -166,6 +166,62 @@ jobs:
           API_BASE_URL: http://127.0.0.1:5000
         run: node ./scripts/ci-dashboard-smoke.mjs
 
+      - name: Install temporary Playwright Chromium
+        if: github.event_name == 'push' && github.ref_name == 'dev'
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          rm -rf /tmp/lander-playwright
+          mkdir -p /tmp/lander-playwright
+          cd /tmp/lander-playwright
+          npm init --yes >/dev/null
+          npm install --no-save --no-package-lock @playwright/test@1.61.1
+          ./node_modules/.bin/playwright install --with-deps chromium
+
+      - name: Start web application for browser E2E
+        if: github.event_name == 'push' && github.ref_name == 'dev'
+        shell: bash
+        env:
+          PORT: 3000
+          VITE_API_URL: http://127.0.0.1:5000
+        run: |
+          set -Eeuo pipefail
+          : > /tmp/lander-dispatch-web.log
+          nohup pnpm --filter @workspace/lander-dispatch dev > /tmp/lander-dispatch-web.log 2>&1 &
+          echo $! > /tmp/lander-dispatch-web.pid
+
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:3000 >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+
+          cat /tmp/lander-dispatch-web.log
+          exit 1
+
+      - name: Run Playwright browser E2E
+        if: github.event_name == 'push' && github.ref_name == 'dev'
+        shell: bash
+        env:
+          E2E_BASE_URL: http://127.0.0.1:3000
+          PLAYWRIGHT_PACKAGE_JSON: /tmp/lander-playwright/package.json
+        run: |
+          set -Eeuo pipefail
+          /tmp/lander-playwright/node_modules/.bin/playwright test \
+            --config ./playwright.config.mjs
+
+      - name: Upload Playwright failure artifacts
+        if: failure() && github.event_name == 'push' && github.ref_name == 'dev'
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-failure-${{ github.run_id }}
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Restart API with authentication required
         shell: bash
         env:
@@ -214,15 +270,22 @@ jobs:
           OWNER_PASSWORD: Ci-Owner-Password-2026
         run: node ./scripts/ci-first-party-auth-smoke.mjs
 
-      - name: Print API log on failure
+      - name: Print runtime logs on failure
         if: failure()
         shell: bash
-        run: cat /tmp/lander-dispatch-api.log 2>/dev/null || true
+        run: |
+          echo '--- API log ---'
+          cat /tmp/lander-dispatch-api.log 2>/dev/null || true
+          echo '--- Web log ---'
+          cat /tmp/lander-dispatch-web.log 2>/dev/null || true
 
       - name: Stop runtime services
         if: always()
         shell: bash
         run: |
+          if [ -f /tmp/lander-dispatch-web.pid ]; then
+            kill "$(cat /tmp/lander-dispatch-web.pid)" 2>/dev/null || true
+          fi
           if [ -f /tmp/lander-dispatch-api.pid ]; then
             kill "$(cat /tmp/lander-dispatch-api.pid)" 2>/dev/null || true
           fi
