@@ -30,7 +30,7 @@ function shouldAudit(req: Request): boolean {
 function resolveEvent(req: Request) {
   const segments = req.path.split("/").filter(Boolean);
   const root = segments[0] ?? "record";
-  const entityType = ENTITY_NAMES[root] ?? root.replace(/s$/, "") || "record";
+  const entityType = (ENTITY_NAMES[root] ?? root.replace(/s$/, "")) || "record";
   const entityId = segments[1] && segments[1] !== "overview" ? segments[1] : null;
   const isPayment = root === "invoices" && segments[2] === "payments";
 
