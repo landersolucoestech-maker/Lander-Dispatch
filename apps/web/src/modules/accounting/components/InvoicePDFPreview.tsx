@@ -1,25 +1,23 @@
-/**
- * InvoicePDFPreview
- * Full-screen, print-ready invoice document with a "Download PDF" button.
- * Uses the browser's native print-to-PDF — no external libs required.
- */
 import { useEffect } from "react";
-import type { Invoice } from "@workspace/api-client-react";
-import { useGetLoad, useGetCarrier, getGetCarrierQueryKey, useGetCompanyProfile } from "@workspace/api-client-react";
+import {
+  getGetCarrierQueryKey,
+  useGetCarrier,
+  useGetCompanyProfile,
+  useGetLoad,
+} from "@workspace/api-client-react";
+import type {
+  Invoice,
+  LoadVehicle,
+} from "@workspace/api-client-react";
 import { Button } from "@/shared/components/ui/button";
-import { formatCurrency } from "@/shared/lib/utils";
 import { buildInvoiceDescription } from "@/shared/lib/invoice-utils";
+import { formatCurrency } from "@/shared/lib/utils";
 import { Download, X } from "lucide-react";
 
-// ── helpers ──────────────────────────────────────────────────────────────────
-
-function fmt(date?: string | null) {
-  if (!date) return "—";
-  const d = new Date(date.slice(0, 10) + "T12:00:00");
-  return d.toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" });
-}
-
-// ── load rows ─────────────────────────────────────────────────────────────────
+type InvoiceWithCommission = Invoice & {
+  subtotal?: number;
+  commissionRate?: number;
+};
 
 interface LoadRowResult {
   description: string;
@@ -28,304 +26,482 @@ interface LoadRowResult {
   extraRows: Array<{ description: string }>;
 }
 
+interface Props {
+  invoice: Invoice;
+  onClose: () => void;
+}
+
+function formatInvoiceDate(date?: string | null) {
+  if (!date) return "—";
+  return new Date(`${date.slice(0, 10)}T12:00:00`).toLocaleDateString("en-US", {
+    month: "short",
+    day: "2-digit",
+    year: "numeric",
+  });
+}
+
+function joinAddress(parts: Array<string | null | undefined>) {
+  return parts.filter(Boolean).join(", ");
+}
+
 function useLoadRow(loadId: string): LoadRowResult | null {
   const { data: load } = useGetLoad(loadId);
   if (!load) return null;
-  const vehicles: any[] = (load as any).vehicles ?? [];
-  const rate = parseFloat(String((load as any).rate ?? "0")) || 0;
-  const dispatchDate: string | null = (load as any).dispatchDate ?? null;
-  const date = dispatchDate ? fmt(dispatchDate) : "—";
-  const [first, ...rest] = vehicles.length > 0 ? vehicles : [null];
+
+  const vehicles: Array<LoadVehicle | null> = load.vehicles?.length
+    ? load.vehicles
+    : [null];
+  const [firstVehicle, ...otherVehicles] = vehicles;
+
   return {
-    description: buildInvoiceDescription({ loadId: (load as any).loadId, year: first?.year, make: first?.make, model: first?.model }),
-    date,
-    rate,
-    extraRows: rest.map((v) => ({
-      description: buildInvoiceDescription({ loadId: (load as any).loadId, year: v?.year, make: v?.make, model: v?.model }),
+    description: buildInvoiceDescription({
+      loadId: load.loadId,
+      year: firstVehicle?.year,
+      make: firstVehicle?.make,
+      model: firstVehicle?.model,
+    }),
+    date: formatInvoiceDate(load.dispatchDate),
+    rate: load.rate ?? 0,
+    extraRows: otherVehicles.map((vehicle) => ({
+      description: buildInvoiceDescription({
+        loadId: load.loadId,
+        year: vehicle?.year,
+        make: vehicle?.make,
+        model: vehicle?.model,
+      }),
     })),
   };
 }
 
 function LoadLineRows({ loadId }: { loadId: string }) {
   const row = useLoadRow(loadId);
+
   if (!row) {
     return (
       <tr>
-        <td style={{ padding: "6px 8px", color: "#888", fontFamily: "monospace", fontSize: 11 }}>{fmt(null)}</td>
-        <td style={{ padding: "6px 8px", fontFamily: "monospace", fontSize: 11, color: "#444" }}>
-          {buildInvoiceDescription({ loadId })}
-        </td>
-        <td style={{ padding: "6px 8px", textAlign: "right", fontFamily: "monospace", fontSize: 11 }}>—</td>
+        <td style={cellMuted}>—</td>
+        <td style={cellDescription}>{buildInvoiceDescription({ loadId })}</td>
+        <td style={cellRate}>—</td>
       </tr>
     );
   }
+
   return (
     <>
       <tr>
-        <td style={{ padding: "6px 8px", color: "#888", fontFamily: "monospace", fontSize: 11, whiteSpace: "nowrap" }}>{row.date}</td>
-        <td style={{ padding: "6px 8px", fontFamily: "monospace", fontSize: 11, color: "#111" }}>{row.description}</td>
-        <td style={{ padding: "6px 8px", textAlign: "right", fontFamily: "monospace", fontSize: 11, fontWeight: 700, color: "#111" }}>
-          {formatCurrency(row.rate)}
-        </td>
+        <td style={{ ...cellMuted, whiteSpace: "nowrap" }}>{row.date}</td>
+        <td style={cellDescription}>{row.description}</td>
+        <td style={cellRate}>{formatCurrency(row.rate)}</td>
       </tr>
-      {row.extraRows.map((r, i) => (
-        <tr key={i}>
-          <td style={{ padding: "6px 8px" }} />
-          <td style={{ padding: "6px 8px", fontFamily: "monospace", fontSize: 11, color: "#444" }}>{r.description}</td>
-          <td style={{ padding: "6px 8px" }} />
+      {row.extraRows.map((extraRow, index) => (
+        <tr key={`${loadId}-${index}`}>
+          <td style={cellMuted} />
+          <td style={{ ...cellDescription, color: "#475569" }}>{extraRow.description}</td>
+          <td style={cellRate} />
         </tr>
       ))}
     </>
   );
 }
 
-// ── main component ────────────────────────────────────────────────────────────
+const cellMuted: React.CSSProperties = {
+  padding: "7px 8px",
+  color: "#64748b",
+  fontSize: 11,
+};
 
-interface Props {
-  invoice: Invoice;
-  onClose: () => void;
+const cellDescription: React.CSSProperties = {
+  padding: "7px 8px",
+  color: "#0f172a",
+  fontSize: 11,
+  fontWeight: 500,
+};
+
+const cellRate: React.CSSProperties = {
+  padding: "7px 8px",
+  color: "#0f172a",
+  fontSize: 11,
+  fontWeight: 700,
+  textAlign: "right",
+  whiteSpace: "nowrap",
+};
+
+function PartyBlock({
+  title,
+  name,
+  contact,
+  address,
+  phone,
+  email,
+  website,
+}: {
+  title: "PAY TO" | "BILL TO";
+  name: string;
+  contact?: string | null;
+  address?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  website?: string | null;
+}) {
+  return (
+    <div style={{ minWidth: 0 }}>
+      <div
+        style={{
+          marginBottom: 8,
+          color: "#2563eb",
+          fontSize: 9,
+          fontWeight: 800,
+          letterSpacing: "0.16em",
+        }}
+      >
+        {title}
+      </div>
+      <div style={{ color: "#0f172a", fontSize: 14, fontWeight: 800 }}>{name}</div>
+      {contact ? <div style={partyLine}>{contact}</div> : null}
+      {address ? <div style={{ ...partyLine, marginTop: 4 }}>{address}</div> : null}
+      {phone ? <div style={partyLine}>{phone}</div> : null}
+      {email ? <div style={partyLine}>{email}</div> : null}
+      {website ? <div style={partyLine}>{website}</div> : null}
+    </div>
+  );
 }
 
+const partyLine: React.CSSProperties = {
+  color: "#475569",
+  fontSize: 11,
+  lineHeight: 1.55,
+};
+
 export function InvoicePDFPreview({ invoice, onClose }: Props) {
-  const d = invoice as any;
-
-  const { data: carrier } = useGetCarrier(d.carrierId ?? "", {
-    query: { enabled: !!d.carrierId, queryKey: getGetCarrierQueryKey(d.carrierId ?? "") },
+  const invoiceData = invoice as InvoiceWithCommission;
+  const carrierId = invoice.carrierId ?? "";
+  const carrierQuery = useGetCarrier(carrierId, {
+    query: {
+      enabled: Boolean(carrierId),
+      queryKey: getGetCarrierQueryKey(carrierId),
+    },
   });
-  const { data: company } = useGetCompanyProfile();
+  const companyQuery = useGetCompanyProfile();
 
-  // Inject print CSS once on mount, remove on unmount
   useEffect(() => {
     const style = document.createElement("style");
     style.id = "invoice-print-css";
     style.textContent = `
       @media print {
         body > * { display: none !important; }
-        #invoice-pdf-root { display: block !important; position: fixed !important; inset: 0 !important; z-index: 9999 !important; background: #fff !important; }
+        #invoice-pdf-root {
+          display: block !important;
+          position: fixed !important;
+          inset: 0 !important;
+          z-index: 9999 !important;
+          background: #fff !important;
+        }
         #invoice-pdf-toolbar { display: none !important; }
-        #invoice-pdf-paper { box-shadow: none !important; margin: 0 !important; border-radius: 0 !important; width: 100% !important; max-width: 100% !important; }
+        #invoice-pdf-paper {
+          width: 100% !important;
+          max-width: 100% !important;
+          min-height: auto !important;
+          margin: 0 !important;
+          box-shadow: none !important;
+        }
         @page { size: A4 portrait; margin: 12mm 14mm; }
       }
     `;
     document.head.appendChild(style);
-    return () => { document.getElementById("invoice-print-css")?.remove(); };
+
+    return () => {
+      document.getElementById("invoice-print-css")?.remove();
+    };
   }, []);
 
-  const subtotal = Number(d.subtotal ?? 0);
-  const commissionRate = Number(d.commissionRate ?? 0);
-  const total = Number(invoice.total ?? 0);
-  const loadIds: string[] = d.loadIds ?? [];
+  const carrier = carrierQuery.data;
+  const company = companyQuery.data;
+  const subtotal = invoiceData.subtotal ?? 0;
+  const commissionRate = invoiceData.commissionRate ?? 0;
+  const loadIds = invoice.loadIds ?? [];
 
-  const payName = company?.companyName ?? "LANDER DISPATCH";
-  const payAddr = [company?.streetAddress, [company?.city, company?.state, company?.zipCode].filter(Boolean).join(", ")].filter(Boolean);
-  const payPhone = company?.companyPhone;
-  const payEmail = company?.companyEmail;
-  const payWeb = company?.website;
-
-  const billName = carrier?.companyName ?? "—";
-  const billContact = carrier?.primaryContact;
-  const billAddr = carrier?.companyAddress;
-  const billCityStateZip = [carrier?.companyCity, carrier?.companyState, (carrier as any)?.companyZip].filter(Boolean).join(", ");
-  const billPhone = carrier?.phone;
-  const billEmail = carrier?.email;
+  const payToName =
+    company?.legalCompanyName || company?.companyName || "Lander Dispatch";
+  const payToAddress = joinAddress([
+    company?.streetAddress,
+    company?.city,
+    company?.state,
+    company?.zipCode,
+    company?.country,
+  ]);
+  const billToAddress = joinAddress([
+    carrier?.companyAddress,
+    carrier?.companyCity,
+    carrier?.companyState,
+    carrier?.companyZip,
+  ]);
 
   return (
     <div
       id="invoice-pdf-root"
       style={{
-        position: "fixed", inset: 0, zIndex: 9999,
-        background: "#1a1a1a",
-        display: "flex", flexDirection: "column",
+        position: "fixed",
+        inset: 0,
+        zIndex: 9999,
+        display: "flex",
+        flexDirection: "column",
         overflow: "hidden",
+        background: "#0f172a",
       }}
     >
-      {/* Toolbar */}
       <div
         id="invoice-pdf-toolbar"
         style={{
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-          padding: "10px 20px", background: "#111", borderBottom: "1px solid #333",
+          display: "flex",
           flexShrink: 0,
+          alignItems: "center",
+          justifyContent: "space-between",
+          borderBottom: "1px solid #334155",
+          background: "#020617",
+          padding: "10px 20px",
         }}
       >
-        <span style={{ fontFamily: "monospace", fontSize: 13, color: "#aaa", letterSpacing: "0.1em" }}>
+        <span style={{ color: "#cbd5e1", fontSize: 13, fontWeight: 700 }}>
           INVOICE — {invoice.invoiceNumber}
         </span>
         <div style={{ display: "flex", gap: 10 }}>
-          <Button
-            size="sm"
-            className="gap-2"
-            onClick={() => window.print()}
-          >
-            <Download className="w-4 h-4" /> Download PDF
+          <Button size="sm" className="gap-2" onClick={() => window.print()}>
+            <Download className="h-4 w-4" />
+            Download PDF
           </Button>
-          <Button variant="outline" size="sm" onClick={onClose}>
-            <X className="w-4 h-4" />
+          <Button variant="outline" size="sm" onClick={onClose} aria-label="Close invoice preview">
+            <X className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
-      {/* Scrollable paper area */}
-      <div style={{ flex: 1, overflow: "auto", padding: "32px 24px", display: "flex", justifyContent: "center" }}>
-        <div
+      <div
+        style={{
+          display: "flex",
+          flex: 1,
+          justifyContent: "center",
+          overflow: "auto",
+          padding: "32px 24px",
+        }}
+      >
+        <article
           id="invoice-pdf-paper"
           style={{
-            background: "#fff",
             width: 794,
             minHeight: 1123,
-            borderRadius: 4,
-            boxShadow: "0 4px 32px rgba(0,0,0,0.5)",
-            padding: "48px 56px",
-            fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
-            color: "#111",
+            flexShrink: 0,
+            background: "#fff",
+            boxShadow: "0 16px 48px rgba(0,0,0,0.45)",
+            color: "#0f172a",
+            fontFamily: "Inter, Arial, sans-serif",
             fontSize: 12,
             lineHeight: 1.5,
-            flexShrink: 0,
+            padding: "48px 56px",
           }}
         >
-          {/* ── 1. Header: Pay To (sender) + Invoice Info ── */}
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 40 }}>
-            {/* Pay To */}
+          <header
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 32,
+              marginBottom: 30,
+            }}
+          >
             <div>
-              <div style={{ fontWeight: 800, fontSize: 18, letterSpacing: "0.05em", marginBottom: 6, textTransform: "uppercase" }}>
-                {payName}
+              <div style={{ color: "#0f172a", fontSize: 20, fontWeight: 900 }}>
+                {company?.companyName || "LANDER DISPATCH"}
               </div>
-              {payAddr.map((line, i) => (
-                <div key={i} style={{ fontSize: 11, color: "#555" }}>{line}</div>
-              ))}
-              {payPhone && <div style={{ fontSize: 11, color: "#555" }}>{payPhone}</div>}
-              {payEmail && <div style={{ fontSize: 11, color: "#555" }}>{payEmail}</div>}
-              {payWeb && <div style={{ fontSize: 11, color: "#555" }}>{payWeb}</div>}
+              <div style={{ marginTop: 4, color: "#2563eb", fontSize: 10, fontWeight: 700 }}>
+                DISPATCH MANAGEMENT SERVICES
+              </div>
             </div>
 
-            {/* Invoice meta */}
             <div style={{ textAlign: "right" }}>
-              <div style={{ fontWeight: 800, fontSize: 24, letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: 8 }}>
-                Invoice
+              <div style={{ fontSize: 28, fontWeight: 900, letterSpacing: "0.05em" }}>
+                INVOICE
               </div>
-              <table style={{ marginLeft: "auto", borderCollapse: "collapse" }}>
-                <tbody>
-                  <tr>
-                    <td style={{ fontSize: 10, color: "#888", textTransform: "uppercase", paddingRight: 16, paddingBottom: 3 }}>Invoice #</td>
-                    <td style={{ fontSize: 11, fontWeight: 700, textAlign: "right", paddingBottom: 3 }}>{invoice.invoiceNumber}</td>
-                  </tr>
-                  <tr>
-                    <td style={{ fontSize: 10, color: "#888", textTransform: "uppercase", paddingRight: 16, paddingBottom: 3 }}>Issue Date</td>
-                    <td style={{ fontSize: 11, textAlign: "right", paddingBottom: 3 }}>{fmt(invoice.issueDate)}</td>
-                  </tr>
-                  <tr>
-                    <td style={{ fontSize: 10, color: "#888", textTransform: "uppercase", paddingRight: 16, paddingBottom: 3 }}>Due Date</td>
-                    <td style={{ fontSize: 11, textAlign: "right", paddingBottom: 3 }}>{fmt(invoice.dueDate)}</td>
-                  </tr>
-                  <tr>
-                    <td style={{ fontSize: 10, color: "#888", textTransform: "uppercase", paddingRight: 16 }}>Status</td>
-                    <td style={{ fontSize: 11, fontWeight: 700, textAlign: "right", textTransform: "uppercase", color: invoice.status === "Paid" ? "#16a34a" : invoice.status === "Overdue" ? "#dc2626" : "#111" }}>
-                      {invoice.status}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+              <div style={{ marginTop: 4, color: "#475569", fontSize: 11 }}>
+                {invoice.invoiceNumber}
+              </div>
             </div>
-          </div>
+          </header>
 
-          {/* ── 2. Divider ── */}
-          <div style={{ borderTop: "2px solid #111", marginBottom: 28 }} />
+          <div style={{ borderTop: "3px solid #2563eb", marginBottom: 28 }} />
 
-          {/* ── 3. Bill To ── */}
-          <div style={{ marginBottom: 32 }}>
-            <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.15em", color: "#888", marginBottom: 6 }}>Bill To</div>
-            <div style={{ fontWeight: 700, fontSize: 13 }}>{billName}</div>
-            {billContact && <div style={{ fontSize: 11, color: "#555" }}>{billContact}</div>}
-            {billAddr && <div style={{ fontSize: 11, color: "#555" }}>{billAddr}</div>}
-            {billCityStateZip && <div style={{ fontSize: 11, color: "#555" }}>{billCityStateZip}</div>}
-            {billPhone && <div style={{ fontSize: 11, color: "#555" }}>{billPhone}</div>}
-            {billEmail && <div style={{ fontSize: 11, color: "#555" }}>{billEmail}</div>}
-          </div>
+          <section
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: 32,
+              marginBottom: 28,
+            }}
+          >
+            <PartyBlock
+              title="PAY TO"
+              name={payToName}
+              address={payToAddress || "Company address not configured"}
+              phone={company?.companyPhone}
+              email={company?.companyEmail}
+              website={company?.website}
+            />
+            <PartyBlock
+              title="BILL TO"
+              name={carrier?.companyName || invoice.carrierName || "Carrier not available"}
+              contact={carrier?.primaryContact}
+              address={billToAddress || "Carrier address not configured"}
+              phone={carrier?.phone}
+              email={carrier?.email}
+            />
+          </section>
 
-          {/* ── 4. Items Table ── */}
+          <section
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(4, 1fr)",
+              gap: 1,
+              marginBottom: 28,
+              background: "#cbd5e1",
+              border: "1px solid #cbd5e1",
+            }}
+          >
+            {[
+              ["INVOICE #", invoice.invoiceNumber],
+              ["ISSUE DATE", formatInvoiceDate(invoice.issueDate)],
+              ["DUE DATE", formatInvoiceDate(invoice.dueDate)],
+              ["STATUS", invoice.status],
+            ].map(([label, value]) => (
+              <div key={label} style={{ background: "#f8fafc", padding: "10px 12px" }}>
+                <div style={{ color: "#64748b", fontSize: 8, fontWeight: 800, letterSpacing: "0.12em" }}>
+                  {label}
+                </div>
+                <div style={{ marginTop: 3, fontSize: 11, fontWeight: 700 }}>{value}</div>
+              </div>
+            ))}
+          </section>
+
           <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 24 }}>
             <thead>
-              <tr style={{ background: "#111" }}>
-                <th style={{ padding: "8px", textAlign: "left", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.12em", color: "#fff", fontWeight: 600, width: 80 }}>Date</th>
-                <th style={{ padding: "8px", textAlign: "left", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.12em", color: "#fff", fontWeight: 600 }}>Description</th>
-                <th style={{ padding: "8px", textAlign: "right", fontSize: 9, textTransform: "uppercase", letterSpacing: "0.12em", color: "#fff", fontWeight: 600, width: 90 }}>Rate</th>
+              <tr style={{ background: "#0f172a" }}>
+                <th style={{ ...headerCell, width: 90 }}>DATE</th>
+                <th style={headerCell}>DESCRIPTION</th>
+                <th style={{ ...headerCell, width: 110, textAlign: "right" }}>RATE</th>
               </tr>
             </thead>
             <tbody>
-              {loadIds.length > 0 ? (
-                loadIds.map((id) => <LoadLineRows key={id} loadId={id} />)
+              {loadIds.length ? (
+                loadIds.map((loadId) => <LoadLineRows key={loadId} loadId={loadId} />)
               ) : (
                 <tr>
-                  <td colSpan={3} style={{ padding: "12px 8px", fontFamily: "monospace", fontSize: 11, color: "#888", textAlign: "center" }}>
-                    No loads linked.
+                  <td colSpan={3} style={{ padding: 16, textAlign: "center", color: "#64748b" }}>
+                    No loads linked to this invoice.
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
 
-          {/* ── 5. Totals ── */}
-          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 32 }}>
-            <table style={{ borderCollapse: "collapse", minWidth: 260 }}>
+          <section style={{ display: "flex", justifyContent: "flex-end" }}>
+            <table style={{ minWidth: 300, borderCollapse: "collapse" }}>
               <tbody>
-                {subtotal > 0 && (
-                  <tr>
-                    <td style={{ padding: "4px 16px 4px 0", fontSize: 11, color: "#555", textAlign: "right" }}>
-                      Subtotal ({loadIds.length} load{loadIds.length !== 1 ? "s" : ""})
-                    </td>
-                    <td style={{ padding: "4px 0", fontSize: 11, textAlign: "right", fontFamily: "monospace" }}>{formatCurrency(subtotal)}</td>
-                  </tr>
-                )}
-                {commissionRate > 0 && (
-                  <tr>
-                    <td style={{ padding: "4px 16px 4px 0", fontSize: 11, color: "#555", textAlign: "right" }}>Commission ({commissionRate}%)</td>
-                    <td style={{ padding: "4px 0", fontSize: 11, textAlign: "right", fontFamily: "monospace" }}>{formatCurrency(total)}</td>
-                  </tr>
-                )}
+                <SummaryRow
+                  label={`Subtotal (${loadIds.length} load${loadIds.length === 1 ? "" : "s"})`}
+                  value={formatCurrency(subtotal)}
+                />
+                <SummaryRow
+                  label={`Commission (${commissionRate.toFixed(2)}%)`}
+                  value={formatCurrency(invoice.total)}
+                />
                 <tr>
-                  <td colSpan={2}><div style={{ borderTop: "1px solid #ddd", margin: "6px 0" }} /></td>
+                  <td colSpan={2} style={{ borderTop: "1px solid #cbd5e1", paddingTop: 8 }} />
                 </tr>
-                <tr style={{ background: "#f5f5f5" }}>
-                  <td style={{ padding: "8px 16px 8px 8px", fontSize: 12, fontWeight: 700, textAlign: "right" }}>Total Due</td>
-                  <td style={{ padding: "8px 0", fontSize: 13, fontWeight: 800, textAlign: "right", fontFamily: "monospace" }}>{formatCurrency(total)}</td>
+                <tr style={{ background: "#eff6ff" }}>
+                  <td style={{ padding: "10px 14px", textAlign: "right", fontWeight: 800 }}>
+                    TOTAL DUE
+                  </td>
+                  <td style={{ padding: "10px 14px", textAlign: "right", fontSize: 15, fontWeight: 900 }}>
+                    {formatCurrency(invoice.total)}
+                  </td>
                 </tr>
-                {invoice.amountPaid > 0 && (
-                  <>
-                    <tr>
-                      <td style={{ padding: "4px 16px 4px 0", fontSize: 11, color: "#16a34a", textAlign: "right" }}>Amount Paid</td>
-                      <td style={{ padding: "4px 0", fontSize: 11, color: "#16a34a", textAlign: "right", fontFamily: "monospace" }}>({formatCurrency(invoice.amountPaid)})</td>
-                    </tr>
-                    <tr>
-                      <td style={{ padding: "4px 16px 4px 0", fontSize: 12, fontWeight: 700, textAlign: "right" }}>Balance Due</td>
-                      <td style={{ padding: "4px 0", fontSize: 12, fontWeight: 700, textAlign: "right", fontFamily: "monospace", color: invoice.balance > 0 ? "#dc2626" : "#16a34a" }}>{formatCurrency(invoice.balance)}</td>
-                    </tr>
-                  </>
-                )}
+                <SummaryRow label="AMOUNT PAID" value={formatCurrency(invoice.amountPaid)} />
+                <SummaryRow label="BALANCE" value={formatCurrency(invoice.balance)} emphasized />
               </tbody>
             </table>
-          </div>
+          </section>
 
-          {/* ── 6. Bank Details ── */}
-          {invoice.notes && (
-            <div style={{ borderTop: "1px solid #ddd", paddingTop: 20, marginTop: 8 }}>
-              <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: "0.15em", color: "#888", marginBottom: 8 }}>Bank Details</div>
-              <div style={{ fontSize: 11, color: "#333", whiteSpace: "pre-wrap", fontFamily: "monospace", lineHeight: 1.7 }}>
-                {invoice.notes}
+          {invoice.notes ? (
+            <section style={{ marginTop: 32, borderTop: "1px solid #e2e8f0", paddingTop: 18 }}>
+              <div style={{ color: "#64748b", fontSize: 9, fontWeight: 800, letterSpacing: "0.14em" }}>
+                NOTES
               </div>
-            </div>
-          )}
+              <p style={{ marginTop: 7, whiteSpace: "pre-wrap", color: "#334155", fontSize: 11 }}>
+                {invoice.notes}
+              </p>
+            </section>
+          ) : null}
 
-          {/* ── 7. Footer ── */}
-          <div style={{ borderTop: "1px solid #eee", marginTop: 48, paddingTop: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: 9, color: "#bbb", textTransform: "uppercase", letterSpacing: "0.1em" }}>
-              {payName}
-            </span>
-            <span style={{ fontSize: 9, color: "#bbb", fontFamily: "monospace" }}>
-              Invoice #{invoice.invoiceNumber}
-            </span>
-          </div>
-        </div>
+          <footer
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              marginTop: 48,
+              borderTop: "1px solid #e2e8f0",
+              paddingTop: 14,
+              color: "#94a3b8",
+              fontSize: 9,
+            }}
+          >
+            <span>{payToName}</span>
+            <span>Invoice {invoice.invoiceNumber}</span>
+          </footer>
+        </article>
       </div>
     </div>
+  );
+}
+
+const headerCell: React.CSSProperties = {
+  padding: "9px 8px",
+  color: "#fff",
+  fontSize: 9,
+  fontWeight: 700,
+  letterSpacing: "0.12em",
+  textAlign: "left",
+};
+
+function SummaryRow({
+  label,
+  value,
+  emphasized = false,
+}: {
+  label: string;
+  value: string;
+  emphasized?: boolean;
+}) {
+  return (
+    <tr>
+      <td
+        style={{
+          padding: "5px 14px 5px 0",
+          color: emphasized ? "#0f172a" : "#475569",
+          fontSize: 11,
+          fontWeight: emphasized ? 800 : 500,
+          textAlign: "right",
+        }}
+      >
+        {label}
+      </td>
+      <td
+        style={{
+          padding: "5px 0",
+          color: emphasized ? "#0f172a" : "#334155",
+          fontSize: emphasized ? 13 : 11,
+          fontWeight: emphasized ? 900 : 600,
+          textAlign: "right",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {value}
+      </td>
+    </tr>
   );
 }
