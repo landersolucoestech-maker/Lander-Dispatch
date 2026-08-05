@@ -30,6 +30,12 @@ const EDITABLE_PIPELINE_STAGES = [
   "Onboarding",
 ] as const;
 
+const PIPELINE_STAGES = [
+  ...EDITABLE_PIPELINE_STAGES,
+  "Won",
+  "Lost",
+] as const;
+
 const PRIORITIES = ["Low", "Normal", "High", "Critical"] as const;
 
 const nullableText = z.string().trim().max(5000).nullable().optional();
@@ -73,9 +79,14 @@ const leadUpdateSchema = leadInputSchema.partial();
 const listLeadSchema = z.object({
   search: z.string().trim().optional(),
   status: z.string().trim().optional(),
+  pipelineStage: z.enum(PIPELINE_STAGES).optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(200).default(20),
 });
+
+function isPipelineStage(value: string): value is (typeof PIPELINE_STAGES)[number] {
+  return (PIPELINE_STAGES as readonly string[]).includes(value);
+}
 
 function serializeLead(lead: typeof crmLeadsTable.$inferSelect) {
   return {
@@ -120,9 +131,18 @@ router.get("/crm/leads", async (req, res): Promise<void> => {
     return;
   }
 
-  const { search, status, page, pageSize } = parsed.data;
+  const { search, status, pipelineStage, page, pageSize } = parsed.data;
+  const legacyPipelineStage = status && isPipelineStage(status) ? status : undefined;
+  const effectivePipelineStage = pipelineStage ?? legacyPipelineStage;
+  const effectiveStatus = status && !legacyPipelineStage ? status : undefined;
   const conditions = [];
-  if (status) conditions.push(eq(crmLeadsTable.status, status));
+
+  if (effectiveStatus) {
+    conditions.push(eq(crmLeadsTable.status, effectiveStatus));
+  }
+  if (effectivePipelineStage) {
+    conditions.push(eq(crmLeadsTable.pipelineStage, effectivePipelineStage));
+  }
   if (search) {
     conditions.push(
       or(
@@ -259,7 +279,10 @@ router.post("/crm/leads/:leadId/convert", async (req, res): Promise<void> => {
       if (lead.status === "Converted" || lead.convertedEntityId) {
         return { kind: "already-converted" as const };
       }
-      if (!lead.leadType || !LEAD_TYPES.includes(lead.leadType as (typeof LEAD_TYPES)[number])) {
+      if (
+        !lead.leadType ||
+        !LEAD_TYPES.includes(lead.leadType as (typeof LEAD_TYPES)[number])
+      ) {
         return { kind: "invalid-type" as const };
       }
 
