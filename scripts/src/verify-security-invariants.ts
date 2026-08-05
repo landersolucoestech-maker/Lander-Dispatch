@@ -25,21 +25,22 @@ assertDevSeedTarget({
 
 const { db } = await import("@workspace/db");
 
-const [bankingResult] = await db.execute<{
+const bankingQuery = await db.execute<{
   plaintext_count: number;
 }>(sql`
   SELECT count(*)::int AS plaintext_count
   FROM crm_contacts
   WHERE account_number IS NOT NULL OR routing_number IS NOT NULL
 `);
+const bankingResult = bankingQuery.rows[0];
 
 if ((bankingResult?.plaintext_count ?? 0) !== 0) {
   throw new Error(
-    `Security invariant failed: ${bankingResult.plaintext_count} CRM contact records still contain plaintext banking numbers.`,
+    `Security invariant failed: ${bankingResult?.plaintext_count ?? 0} CRM contact records still contain plaintext banking numbers.`,
   );
 }
 
-const constraints = await db.execute<{ conname: string }>(sql`
+const constraintsQuery = await db.execute<{ conname: string }>(sql`
   SELECT conname
   FROM pg_constraint
   WHERE conname IN (
@@ -48,7 +49,9 @@ const constraints = await db.execute<{ conname: string }>(sql`
   )
 `);
 
-const constraintNames = new Set(constraints.map((row) => row.conname));
+const constraintNames = new Set(
+  constraintsQuery.rows.map((row: { conname: string }) => row.conname),
+);
 for (const expected of [
   "crm_contacts_account_number_disabled",
   "crm_contacts_routing_number_disabled",
@@ -58,7 +61,7 @@ for (const expected of [
   }
 }
 
-const [auditResult] = await db.execute<{
+const auditQuery = await db.execute<{
   audit_logs_exists: boolean;
   legacy_audit_exists: boolean;
 }>(sql`
@@ -66,6 +69,7 @@ const [auditResult] = await db.execute<{
     to_regclass('public.audit_logs') IS NOT NULL AS audit_logs_exists,
     to_regclass('public.audit_log') IS NOT NULL AS legacy_audit_exists
 `);
+const auditResult = auditQuery.rows[0];
 
 if (!auditResult?.audit_logs_exists) {
   throw new Error("Security invariant failed: active audit_logs table is missing.");
