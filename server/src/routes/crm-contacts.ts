@@ -220,17 +220,17 @@ router.patch("/crm/contacts/:contactId", async (req, res): Promise<void> => {
     return;
   }
 
-  const data = parsed.data;
+  const { rating, state, ...rest } = parsed.data;
   const updateData: Partial<typeof crmContactsTable.$inferInsert> = {
-    ...data,
+    ...rest,
     updatedAt: new Date(),
   };
 
-  if (data.state !== undefined) {
-    updateData.state = data.state?.toUpperCase() ?? null;
+  if (state !== undefined) {
+    updateData.state = state?.toUpperCase() ?? null;
   }
-  if (data.rating !== undefined) {
-    updateData.rating = data.rating == null ? null : String(data.rating);
+  if (rating !== undefined) {
+    updateData.rating = rating == null ? null : String(rating);
   }
 
   const [contact] = await db
