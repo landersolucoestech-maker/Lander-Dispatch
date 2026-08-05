@@ -21,6 +21,8 @@ import InvoiceDetailPage from '@/modules/accounting/pages/InvoiceDetailPage';
 import TransactionsListPage from '@/modules/accounting/pages/TransactionsListPage';
 import TransactionDetailPage from '@/modules/accounting/pages/TransactionDetailPage';
 import ProfitLossPage from '@/modules/accounting/pages/ProfitLossPage';
+import DocumentsPage from '@/modules/documents/pages/DocumentsPage';
+import AuditLogPage from '@/modules/documents/pages/AuditLogPage';
 import ReportsPage from '@/modules/reports/pages/ReportsPage';
 import SettingsPage from '@/modules/settings/pages/SettingsPage';
 import NotFound from '@/pages/not-found';
@@ -108,6 +110,8 @@ function AppRouter() {
         />
         <Route path="/accounting/profit-loss" component={ProfitLossPage} />
 
+        <Route path="/documents" component={DocumentsPage} />
+        <Route path="/audit-log" component={AuditLogPage} />
         <Route path="/reports" component={ReportsPage} />
         <Route path="/settings" component={SettingsPage} />
 
