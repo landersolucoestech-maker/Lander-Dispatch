@@ -1,10 +1,8 @@
-import { useState, useEffect } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  useCreateCrmLead,
-  useUpdateCrmLead,
-  getListCrmLeadsQueryKey,
   getGetCrmLeadQueryKey,
+  getListCrmLeadsQueryKey,
 } from "@workspace/api-client-react";
 import type { CrmLead } from "@workspace/api-client-react";
 import {
@@ -25,14 +23,19 @@ import {
   SelectValue,
 } from "@/shared/components/ui/select";
 import {
-  LEAD_TYPES,
+  createLead,
+  updateLead,
+  type LeadMutationInput,
+  type LeadRecord,
+} from "../api/leads";
+import {
   EDITABLE_PIPELINE_STAGES,
   LEAD_SOURCES,
+  LEAD_TYPES,
   PRIORITIES,
-  LEAD_TYPE_CONFIG,
-  type LeadType,
   type EditablePipelineStage,
   type LeadSource,
+  type LeadType,
   type Priority,
 } from "../config/leadTypes";
 import {
@@ -41,26 +44,11 @@ import {
   type BrokerLeadData,
 } from "./BrokerLeadFields";
 
-// ── helpers ────────────────────────────────────────────────────────────────────
-
-const nullableText = (v: string): string | null => v.trim() || null;
-const nullableInt = (v: string): number | null => {
-  if (!v.trim()) return null;
-  const n = parseInt(v, 10);
-  return Number.isFinite(n) ? n : null;
-};
-const nullableMoney = (v: string): number | null => {
-  if (!v.trim()) return null;
-  const n = parseFloat(v);
-  return Number.isFinite(n) ? Math.round(n * 100) / 100 : null;
-};
-const nullableDecimal = (v: string): number | null => {
-  if (!v.trim()) return null;
-  const n = parseFloat(v);
-  return Number.isFinite(n) ? n : null;
-};
-
-// ── form state ─────────────────────────────────────────────────────────────────
+interface Props {
+  open: boolean;
+  onClose: () => void;
+  initialData?: CrmLead;
+}
 
 interface LeadFormState {
   companyName: string;
@@ -88,7 +76,7 @@ interface LeadFormState {
   notes: string;
 }
 
-const createEmptyLeadForm = (): LeadFormState => ({
+const EMPTY_FORM: LeadFormState = {
   companyName: "",
   leadType: "",
   pipelineStage: "New Lead",
@@ -112,372 +100,597 @@ const createEmptyLeadForm = (): LeadFormState => ({
   followUpNotes: "",
   tags: "",
   notes: "",
-});
+};
 
-function fromLead(d: CrmLead): LeadFormState {
-  const raw = d as any;
+function isLeadType(value: string): value is LeadType {
+  return (LEAD_TYPES as readonly string[]).includes(value);
+}
+
+function isPipelineStage(value: string): value is EditablePipelineStage {
+  return (EDITABLE_PIPELINE_STAGES as readonly string[]).includes(value);
+}
+
+function isLeadSource(value: string): value is LeadSource {
+  return (LEAD_SOURCES as readonly string[]).includes(value);
+}
+
+function isPriority(value: string): value is Priority {
+  return (PRIORITIES as readonly string[]).includes(value);
+}
+
+function optionalText(value: string): string | null {
+  return value.trim() || null;
+}
+
+function optionalInteger(value: string): number | null {
+  if (!value.trim()) return null;
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function optionalNumber(value: string): number | null {
+  if (!value.trim()) return null;
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? Math.round(parsed * 100) / 100 : null;
+}
+
+function splitValues(value: string): string[] {
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function recordFromLead(lead: CrmLead): LeadRecord {
+  return lead as LeadRecord;
+}
+
+function formFromLead(lead: CrmLead): LeadFormState {
+  const record = recordFromLead(lead);
   return {
-    companyName: raw.companyName ?? "",
-    leadType: (raw.leadType ?? "") as LeadType | "",
-    pipelineStage: (raw.pipelineStage ?? "New Lead") as EditablePipelineStage,
-    leadSource: (raw.leadSource ?? "") as LeadSource | "",
-    priority: (raw.priority ?? "") as Priority | "",
-    rating: raw.rating != null ? String(raw.rating) : "",
-    primaryContact: raw.primaryContact ?? "",
-    phone: raw.phone ?? "",
-    email: raw.email ?? "",
-    website: raw.website ?? "",
-    streetAddress: raw.streetAddress ?? "",
-    city: raw.city ?? "",
-    state: raw.state ?? "",
-    zipCode: raw.zipCode ?? "",
-    serviceTypes: Array.isArray(raw.serviceTypes) ? raw.serviceTypes.join(", ") : "",
-    operatingStates: Array.isArray(raw.operatingStates) ? raw.operatingStates.join(", ") : "",
-    estimatedWeeklyLoads: raw.estimatedWeeklyLoads?.toString() ?? "",
-    estimatedWeeklyRevenue: raw.estimatedWeeklyRevenue?.toString() ?? "",
-    nextFollowUpDate: raw.nextFollowUpDate?.slice?.(0, 10) ?? "",
-    nextFollowUpTime: raw.nextFollowUpTime ?? "",
-    followUpNotes: raw.followUpNotes ?? "",
-    tags: Array.isArray(raw.tags) ? raw.tags.join(", ") : "",
-    notes: raw.notes ?? "",
+    companyName: record.companyName ?? "",
+    leadType: record.leadType && isLeadType(record.leadType) ? record.leadType : "",
+    pipelineStage:
+      record.pipelineStage && isPipelineStage(record.pipelineStage)
+        ? record.pipelineStage
+        : "New Lead",
+    leadSource:
+      record.leadSource && isLeadSource(record.leadSource)
+        ? record.leadSource
+        : "",
+    priority:
+      record.priority && isPriority(record.priority) ? record.priority : "",
+    rating: record.rating == null ? "" : String(record.rating),
+    primaryContact: record.primaryContact ?? "",
+    phone: record.phone ?? "",
+    email: record.email ?? "",
+    website: record.website ?? "",
+    streetAddress: record.streetAddress ?? "",
+    city: record.city ?? "",
+    state: record.state ?? "",
+    zipCode: record.zipCode ?? "",
+    serviceTypes: record.serviceTypes?.join(", ") ?? "",
+    operatingStates: record.operatingStates?.join(", ") ?? "",
+    estimatedWeeklyLoads:
+      record.estimatedWeeklyLoads == null
+        ? ""
+        : String(record.estimatedWeeklyLoads),
+    estimatedWeeklyRevenue:
+      record.estimatedWeeklyRevenue == null
+        ? ""
+        : String(record.estimatedWeeklyRevenue),
+    nextFollowUpDate: record.nextFollowUpDate?.slice(0, 10) ?? "",
+    nextFollowUpTime: record.nextFollowUpTime ?? "",
+    followUpNotes: record.followUpNotes ?? "",
+    tags: record.tags?.join(", ") ?? "",
+    notes: record.notes ?? "",
   };
 }
 
-function brokerDataFromLead(d: CrmLead): BrokerLeadData {
-  const raw = d as any;
+function brokerFromLead(lead: CrmLead): BrokerLeadData {
+  const record = recordFromLead(lead);
   return {
-    brokerType: raw.brokerType ?? "",
-    mcNumber: raw.mcNumber ?? "",
-    usdotNumber: raw.usdotNumber ?? "",
-    coverage: raw.coverage ?? "",
-    freightTypes: raw.freightTypes ?? "",
-    selectedStates: raw.selectedStates ?? "",
+    brokerType: record.brokerType ?? "",
+    mcNumber: record.mcNumber ?? "",
+    usdotNumber: record.usdotNumber ?? "",
+    coverage: record.coverage ?? "",
+    freightTypes: record.freightTypes ?? "",
+    selectedStates: record.selectedStates ?? "",
   };
 }
 
-// ── component ─────────────────────────────────────────────────────────────────
+function Section({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="space-y-4 border border-border bg-card p-4 sm:p-5">
+      <div className="border-b border-border pb-3">
+        <h3 className="text-sm font-semibold uppercase tracking-wide">{title}</h3>
+        {description ? (
+          <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+        ) : null}
+      </div>
+      {children}
+    </section>
+  );
+}
 
-interface Props {
-  open: boolean;
-  onClose: () => void;
-  initialData?: CrmLead;
+function Field({
+  label,
+  children,
+  className = "",
+}: {
+  label: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={`flex flex-col gap-1.5 ${className}`}>
+      <Label className="text-xs">{label}</Label>
+      {children}
+    </div>
+  );
 }
 
 export function LeadFormModal({ open, onClose, initialData }: Props) {
-  const qc = useQueryClient();
-  const isEdit = !!initialData;
-  const createMutation = useCreateCrmLead();
-  const updateMutation = useUpdateCrmLead();
-
-  const [form, setForm] = useState<LeadFormState>(createEmptyLeadForm);
-  const [brokerData, setBrokerData] = useState<BrokerLeadData>(emptyBrokerLeadData());
+  const queryClient = useQueryClient();
+  const [form, setForm] = useState<LeadFormState>(EMPTY_FORM);
+  const [brokerData, setBrokerData] = useState<BrokerLeadData>(
+    emptyBrokerLeadData(),
+  );
 
   useEffect(() => {
     if (initialData) {
-      setForm(fromLead(initialData));
-      setBrokerData(brokerDataFromLead(initialData));
+      setForm(formFromLead(initialData));
+      setBrokerData(brokerFromLead(initialData));
     } else {
-      setForm(createEmptyLeadForm());
+      setForm(EMPTY_FORM);
       setBrokerData(emptyBrokerLeadData());
     }
   }, [initialData, open]);
 
-  const set = <K extends keyof LeadFormState>(k: K) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-      setForm((p) => ({ ...p, [k]: e.target.value }));
+  const createMutation = useMutation({ mutationFn: createLead });
+  const updateMutation = useMutation({
+    mutationFn: ({
+      leadId,
+      data,
+    }: {
+      leadId: string;
+      data: LeadMutationInput;
+    }) => updateLead(leadId, data),
+  });
 
-  const sel = <K extends keyof LeadFormState>(k: K) => (v: string) =>
-    setForm((p) => ({ ...p, [k]: v === "__none__" ? "" : v as any }));
+  const updateForm = <K extends keyof LeadFormState>(
+    field: K,
+    value: LeadFormState[K],
+  ) => {
+    setForm((previous) => ({ ...previous, [field]: value }));
+  };
 
-  function handleLeadTypeChange(value: string) {
-    const leadType = (value === "__none__" ? "" : value) as LeadType | "";
-    // Clear broker data when switching away from Broker
+  const handleLeadTypeChange = (value: string) => {
+    const leadType = isLeadType(value) ? value : "";
     if (leadType !== "Broker") setBrokerData(emptyBrokerLeadData());
-    setForm((p) => ({ ...p, leadType }));
-  }
+    updateForm("leadType", leadType);
+  };
 
-  const splitArr = (s: string) => s.split(",").map((x) => x.trim()).filter(Boolean);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const brokerFields = form.leadType === "Broker" ? {
-      brokerType: nullableText(brokerData.brokerType),
-      mcNumber: nullableText(brokerData.mcNumber),
-      usdotNumber: nullableText(brokerData.usdotNumber),
-      coverage: nullableText(brokerData.coverage),
-      freightTypes: nullableText(brokerData.freightTypes),
-      selectedStates: nullableText(brokerData.selectedStates),
-    } : {
-      brokerType: null, mcNumber: null, usdotNumber: null,
-      coverage: null, freightTypes: null, selectedStates: null,
-    };
-
-    const payload = {
-      companyName: form.companyName.trim(),
-      leadType: nullableText(form.leadType),
-      pipelineStage: form.pipelineStage,
-      leadSource: nullableText(form.leadSource),
-      priority: nullableText(form.priority),
-      rating: nullableDecimal(form.rating),
-      primaryContact: nullableText(form.primaryContact),
-      phone: nullableText(form.phone),
-      email: nullableText(form.email),
-      website: nullableText(form.website),
-      streetAddress: nullableText(form.streetAddress),
-      city: nullableText(form.city),
-      state: nullableText(form.state.toUpperCase()),
-      zipCode: nullableText(form.zipCode),
-      serviceTypes: splitArr(form.serviceTypes),
-      operatingStates: splitArr(form.operatingStates),
-      estimatedWeeklyLoads: nullableInt(form.estimatedWeeklyLoads),
-      estimatedWeeklyRevenue: nullableMoney(form.estimatedWeeklyRevenue),
-      nextFollowUpDate: nullableText(form.nextFollowUpDate),
-      nextFollowUpTime: nullableText(form.nextFollowUpTime),
-      followUpNotes: nullableText(form.followUpNotes),
-      tags: splitArr(form.tags),
-      notes: nullableText(form.notes),
-      ...brokerFields,
-    };
-
-    const invalidate = () => {
-      qc.invalidateQueries({ queryKey: getListCrmLeadsQueryKey() });
-      if (initialData?.id) {
-        qc.invalidateQueries({ queryKey: getGetCrmLeadQueryKey(initialData.id) });
-      }
-    };
-
-    if (isEdit) {
-      updateMutation.mutate(
-        { leadId: initialData!.id, data: payload as any },
-        { onSuccess: () => { invalidate(); onClose(); } }
-      );
-    } else {
-      createMutation.mutate(
-        { data: payload as any },
-        { onSuccess: () => { invalidate(); onClose(); } }
-      );
+  const invalidate = async () => {
+    await queryClient.invalidateQueries({
+      queryKey: getListCrmLeadsQueryKey(),
+    });
+    if (initialData?.id) {
+      await queryClient.invalidateQueries({
+        queryKey: getGetCrmLeadQueryKey(initialData.id),
+      });
     }
   };
 
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!form.companyName.trim() || !form.leadType) return;
+
+    const isBroker = form.leadType === "Broker";
+    const payload: LeadMutationInput = {
+      companyName: form.companyName.trim(),
+      leadType: form.leadType,
+      pipelineStage: form.pipelineStage,
+      leadSource: form.leadSource || null,
+      priority: form.priority || null,
+      rating: optionalNumber(form.rating),
+      primaryContact: optionalText(form.primaryContact),
+      phone: optionalText(form.phone),
+      email: optionalText(form.email),
+      website: optionalText(form.website),
+      streetAddress: optionalText(form.streetAddress),
+      city: optionalText(form.city),
+      state: optionalText(form.state.toUpperCase()),
+      zipCode: optionalText(form.zipCode),
+      serviceTypes: splitValues(form.serviceTypes),
+      operatingStates: splitValues(form.operatingStates),
+      estimatedWeeklyLoads: optionalInteger(form.estimatedWeeklyLoads),
+      estimatedWeeklyRevenue: optionalNumber(form.estimatedWeeklyRevenue),
+      nextFollowUpDate: optionalText(form.nextFollowUpDate),
+      nextFollowUpTime: optionalText(form.nextFollowUpTime),
+      followUpNotes: optionalText(form.followUpNotes),
+      tags: splitValues(form.tags),
+      notes: optionalText(form.notes),
+      brokerType: isBroker ? optionalText(brokerData.brokerType) : null,
+      mcNumber: isBroker ? optionalText(brokerData.mcNumber) : null,
+      usdotNumber: isBroker ? optionalText(brokerData.usdotNumber) : null,
+      coverage: isBroker ? optionalText(brokerData.coverage) : null,
+      freightTypes: isBroker ? optionalText(brokerData.freightTypes) : null,
+      selectedStates: isBroker ? optionalText(brokerData.selectedStates) : null,
+    };
+
+    const onSuccess = async () => {
+      await invalidate();
+      onClose();
+    };
+
+    if (initialData) {
+      updateMutation.mutate(
+        { leadId: initialData.id, data: payload },
+        { onSuccess },
+      );
+      return;
+    }
+
+    createMutation.mutate(payload, { onSuccess });
+  };
+
   const isPending = createMutation.isPending || updateMutation.isPending;
-  const isBroker = form.leadType === "Broker";
+  const mutationError = createMutation.error ?? updateMutation.error;
+  const emailIsValid =
+    !form.email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email);
+  const canSubmit =
+    Boolean(form.companyName.trim()) &&
+    Boolean(form.leadType) &&
+    emailIsValid &&
+    !isPending;
 
   return (
-    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={open} onOpenChange={(value) => !value && onClose()}>
+      <DialogContent className="max-h-[94vh] max-w-5xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>
-            {isEdit ? `Edit Lead — ${initialData?.companyName}` : "Add Lead"}
+          <DialogTitle className="text-base font-semibold">
+            {initialData
+              ? `Edit Lead — ${initialData.companyName}`
+              : "Create Lead"}
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6 mt-2">
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="border border-blue-500/25 bg-blue-500/5 p-3 text-sm text-muted-foreground">
+            Leads represent potential demand sources. Carrier is not an allowed
+            Lead type and remains exclusively in Contacts.
+          </div>
 
-          {/* ── 1. Lead Information ──────────────────────────────── */}
-          <section>
-            <h3 className="text-sm font-semibold text-muted-foreground mb-3">Lead Information</h3>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-
-              <div className="md:col-span-2 flex flex-col gap-1.5">
-                <Label>Company Name *</Label>
-                <Input required value={form.companyName} onChange={set("companyName")} placeholder="Acme Freight Inc." />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <Label>Lead Type *</Label>
-                <Select value={form.leadType || "__none__"} onValueChange={handleLeadTypeChange}>
-                  <SelectTrigger><SelectValue placeholder="Select lead type" /></SelectTrigger>
+          <Section
+            title="Lead Information"
+            description="Demand-source classification and pipeline qualification."
+          >
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <Field label="Company Name *" className="md:col-span-2">
+                <Input
+                  required
+                  value={form.companyName}
+                  onChange={(event) =>
+                    updateForm("companyName", event.target.value)
+                  }
+                />
+              </Field>
+              <Field label="Lead Type *">
+                <Select
+                  value={form.leadType || "__none__"}
+                  onValueChange={handleLeadTypeChange}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__none__">Select type…</SelectItem>
-                    {LEAD_TYPES.map((t) => (
-                      <SelectItem key={t} value={t}>{t}</SelectItem>
+                    {LEAD_TYPES.map((leadType) => (
+                      <SelectItem key={leadType} value={leadType}>
+                        {leadType}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <Label>Pipeline Stage</Label>
+              </Field>
+              <Field label="Pipeline Stage">
                 <Select
                   value={form.pipelineStage}
-                  onValueChange={(v) => setForm((p) => ({ ...p, pipelineStage: v as EditablePipelineStage }))}
+                  onValueChange={(value) => {
+                    if (isPipelineStage(value)) {
+                      updateForm("pipelineStage", value);
+                    }
+                  }}
                 >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
-                    {EDITABLE_PIPELINE_STAGES.map((s) => (
-                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    {EDITABLE_PIPELINE_STAGES.map((stage) => (
+                      <SelectItem key={stage} value={stage}>
+                        {stage}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <Label>Lead Source</Label>
-                <Select value={form.leadSource || "__none__"} onValueChange={sel("leadSource")}>
-                  <SelectTrigger><SelectValue placeholder="Select source" /></SelectTrigger>
+              </Field>
+              <Field label="Lead Source">
+                <Select
+                  value={form.leadSource || "__none__"}
+                  onValueChange={(value) =>
+                    updateForm(
+                      "leadSource",
+                      isLeadSource(value) ? value : "",
+                    )
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select source" />
+                  </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__none__">None</SelectItem>
-                    {LEAD_SOURCES.map((s) => (
-                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    <SelectItem value="__none__">Not specified</SelectItem>
+                    {LEAD_SOURCES.map((source) => (
+                      <SelectItem key={source} value={source}>
+                        {source}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <Label>Priority</Label>
-                <Select value={form.priority || "__none__"} onValueChange={sel("priority")}>
-                  <SelectTrigger><SelectValue placeholder="Select priority" /></SelectTrigger>
+              </Field>
+              <Field label="Priority">
+                <Select
+                  value={form.priority || "__none__"}
+                  onValueChange={(value) =>
+                    updateForm("priority", isPriority(value) ? value : "")
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select priority" />
+                  </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__none__">None</SelectItem>
-                    {PRIORITIES.map((p) => (
-                      <SelectItem key={p} value={p}>{p}</SelectItem>
+                    <SelectItem value="__none__">Not specified</SelectItem>
+                    {PRIORITIES.map((priority) => (
+                      <SelectItem key={priority} value={priority}>
+                        {priority}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <Label>Rating (0–5)</Label>
-                <Input type="number" min="0" max="5" step="0.1" value={form.rating} onChange={set("rating")} placeholder="0.0" />
-              </div>
-            </div>
-          </section>
-
-          {/* ── 2. Primary Contact ───────────────────────────────── */}
-          <section>
-            <h3 className="text-sm font-semibold text-muted-foreground mb-3">Primary Contact</h3>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="flex flex-col gap-1.5">
-                <Label>Contact Name</Label>
-                <Input value={form.primaryContact} onChange={set("primaryContact")} placeholder="John Doe" />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>Phone</Label>
-                <Input value={form.phone} onChange={set("phone")} placeholder="(555) 555-5555" />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>Email</Label>
-                <Input type="email" value={form.email} onChange={set("email")} placeholder="contact@company.com" />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>Website</Label>
-                <Input value={form.website} onChange={set("website")} placeholder="https://example.com" />
-              </div>
-            </div>
-          </section>
-
-          {/* ── 3. Address ───────────────────────────────────────── */}
-          <section>
-            <h3 className="text-sm font-semibold text-muted-foreground mb-3">Address</h3>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="md:col-span-2 flex flex-col gap-1.5">
-                <Label>Street Address</Label>
-                <Input value={form.streetAddress} onChange={set("streetAddress")} placeholder="123 Main St" />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>City</Label>
-                <Input value={form.city} onChange={set("city")} placeholder="Houston" />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>State</Label>
+              </Field>
+              <Field label="Rating">
                 <Input
-                  value={form.state}
-                  onChange={(e) => setForm((p) => ({ ...p, state: e.target.value.toUpperCase().slice(0, 2) }))}
-                  maxLength={2}
-                  placeholder="TX"
+                  type="number"
+                  min="0"
+                  max="5"
+                  step="0.1"
+                  value={form.rating}
+                  onChange={(event) => updateForm("rating", event.target.value)}
                 />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>ZIP Code</Label>
-                <Input value={form.zipCode} onChange={set("zipCode")} placeholder="77001" />
-              </div>
+              </Field>
             </div>
-          </section>
+          </Section>
 
-          {/* ── 4. Demand Profile ────────────────────────────────── */}
-          <section>
-            <h3 className="text-sm font-semibold text-muted-foreground mb-3">Demand Profile</h3>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="md:col-span-2 flex flex-col gap-1.5">
-                <Label>Service Types <span className="text-muted-foreground text-xs">(comma-separated)</span></Label>
-                <Input value={form.serviceTypes} onChange={set("serviceTypes")} placeholder="Dry Van, Flatbed, Reefer…" />
-              </div>
-              <div className="md:col-span-2 flex flex-col gap-1.5">
-                <Label>Operating States <span className="text-muted-foreground text-xs">(comma-separated)</span></Label>
-                <Input value={form.operatingStates} onChange={set("operatingStates")} placeholder="TX, FL, CA…" />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>Est. Weekly Loads</Label>
-                <Input type="number" min="0" step="1" value={form.estimatedWeeklyLoads} onChange={set("estimatedWeeklyLoads")} placeholder="0" />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>Est. Weekly Revenue ($)</Label>
-                <Input type="number" min="0" step="0.01" value={form.estimatedWeeklyRevenue} onChange={set("estimatedWeeklyRevenue")} placeholder="0.00" />
-              </div>
+          <Section title="Primary Contact">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <Field label="Contact Name">
+                <Input
+                  value={form.primaryContact}
+                  onChange={(event) =>
+                    updateForm("primaryContact", event.target.value)
+                  }
+                />
+              </Field>
+              <Field label="Phone">
+                <Input
+                  value={form.phone}
+                  onChange={(event) => updateForm("phone", event.target.value)}
+                />
+              </Field>
+              <Field label="Email">
+                <Input
+                  type="email"
+                  value={form.email}
+                  aria-invalid={!emailIsValid}
+                  onChange={(event) => updateForm("email", event.target.value)}
+                />
+                {!emailIsValid ? (
+                  <p className="text-xs text-destructive">
+                    Enter a valid email address.
+                  </p>
+                ) : null}
+              </Field>
+              <Field label="Website">
+                <Input
+                  value={form.website}
+                  onChange={(event) => updateForm("website", event.target.value)}
+                />
+              </Field>
             </div>
-          </section>
+          </Section>
 
-          {/* ── 5. Type-Specific Information ─────────────────────── */}
-          {isBroker && (
-            <BrokerLeadFields data={brokerData} onChange={setBrokerData} />
-          )}
+          <Section title="Address">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
+              <Field label="Street Address" className="md:col-span-2">
+                <Input
+                  value={form.streetAddress}
+                  onChange={(event) =>
+                    updateForm("streetAddress", event.target.value)
+                  }
+                />
+              </Field>
+              <Field label="City">
+                <Input
+                  value={form.city}
+                  onChange={(event) => updateForm("city", event.target.value)}
+                />
+              </Field>
+              <Field label="State">
+                <Input
+                  maxLength={2}
+                  value={form.state}
+                  onChange={(event) =>
+                    updateForm("state", event.target.value.toUpperCase())
+                  }
+                />
+              </Field>
+              <Field label="ZIP Code">
+                <Input
+                  value={form.zipCode}
+                  onChange={(event) => updateForm("zipCode", event.target.value)}
+                />
+              </Field>
+            </div>
+          </Section>
 
-          {/* ── 6. Follow-Up ─────────────────────────────────────── */}
-          <section>
-            <h3 className="text-sm font-semibold text-muted-foreground mb-3">Follow-Up</h3>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="flex flex-col gap-1.5">
-                <Label>Next Follow-Up Date</Label>
-                <Input type="date" value={form.nextFollowUpDate} onChange={set("nextFollowUpDate")} />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>Next Follow-Up Time</Label>
+          {form.leadType === "Broker" ? (
+            <Section
+              title="Broker Prospect Details"
+              description="Lightweight prospect fields only; payment and onboarding belong to the Broker record after conversion."
+            >
+              <BrokerLeadFields data={brokerData} onChange={setBrokerData} />
+            </Section>
+          ) : null}
+
+          <Section
+            title="Demand Profile"
+            description="Expected volume and operating scope for generating carrier demand."
+          >
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <Field label="Service Types" className="md:col-span-2">
+                <Input
+                  value={form.serviceTypes}
+                  onChange={(event) =>
+                    updateForm("serviceTypes", event.target.value)
+                  }
+                  placeholder="Dealer Transfers, Auction Pickup"
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Separate values with commas.
+                </p>
+              </Field>
+              <Field label="Operating States" className="md:col-span-2">
+                <Input
+                  value={form.operatingStates}
+                  onChange={(event) =>
+                    updateForm(
+                      "operatingStates",
+                      event.target.value.toUpperCase(),
+                    )
+                  }
+                  placeholder="FL, GA, SC"
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Use two-letter state codes separated by commas.
+                </p>
+              </Field>
+              <Field label="Estimated Weekly Loads">
+                <Input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={form.estimatedWeeklyLoads}
+                  onChange={(event) =>
+                    updateForm("estimatedWeeklyLoads", event.target.value)
+                  }
+                />
+              </Field>
+              <Field label="Estimated Weekly Revenue">
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.estimatedWeeklyRevenue}
+                  onChange={(event) =>
+                    updateForm("estimatedWeeklyRevenue", event.target.value)
+                  }
+                />
+              </Field>
+            </div>
+          </Section>
+
+          <Section title="Follow-Up">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <Field label="Next Follow-Up Date">
+                <Input
+                  type="date"
+                  value={form.nextFollowUpDate}
+                  onChange={(event) =>
+                    updateForm("nextFollowUpDate", event.target.value)
+                  }
+                />
+              </Field>
+              <Field label="Next Follow-Up Time">
                 <Input
                   type="time"
                   value={form.nextFollowUpTime}
-                  onChange={set("nextFollowUpTime")}
-                  disabled={!form.nextFollowUpDate}
-                  title={!form.nextFollowUpDate ? "Set a date first" : undefined}
+                  onChange={(event) =>
+                    updateForm("nextFollowUpTime", event.target.value)
+                  }
                 />
-              </div>
-              <div className="md:col-span-2 flex flex-col gap-1.5">
-                <Label>Follow-Up Notes</Label>
-                <Textarea value={form.followUpNotes} onChange={set("followUpNotes")} rows={2} placeholder="What to discuss…" />
-              </div>
-              {isEdit && (initialData as any)?.lastContact && (
-                <div className="flex flex-col gap-1.5">
-                  <Label className="text-muted-foreground">Last Contact</Label>
-                  <p className="text-sm">{String((initialData as any).lastContact).slice(0, 10)}</p>
-                </div>
-              )}
+              </Field>
+              <Field label="Follow-Up Notes" className="md:col-span-2">
+                <Textarea
+                  rows={3}
+                  value={form.followUpNotes}
+                  onChange={(event) =>
+                    updateForm("followUpNotes", event.target.value)
+                  }
+                />
+              </Field>
             </div>
-          </section>
+          </Section>
 
-          {/* ── 7. Internal Management ───────────────────────────── */}
-          <section>
-            <h3 className="text-sm font-semibold text-muted-foreground mb-3">Internal Management</h3>
-            <div className="grid grid-cols-1 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <Label>Tags <span className="text-muted-foreground text-xs">(comma-separated)</span></Label>
-                <Input value={form.tags} onChange={set("tags")} placeholder="hot-lead, referral…" />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>Notes</Label>
-                <Textarea value={form.notes} onChange={set("notes")} rows={3} placeholder="Internal notes…" />
-              </div>
+          <Section title="Internal Management">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <Field label="Tags">
+                <Input
+                  value={form.tags}
+                  onChange={(event) => updateForm("tags", event.target.value)}
+                  placeholder="High volume, Referral"
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Separate values with commas.
+                </p>
+              </Field>
+              <Field label="Notes" className="md:col-span-2">
+                <Textarea
+                  rows={4}
+                  value={form.notes}
+                  onChange={(event) => updateForm("notes", event.target.value)}
+                />
+              </Field>
             </div>
-          </section>
+          </Section>
 
-          {/* ── Actions ──────────────────────────────────────────── */}
-          <div className="flex justify-end gap-2 border-t border-border pt-4">
-            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-            <Button type="submit" disabled={isPending || !form.companyName.trim()}>
-              {isPending ? "Saving…" : isEdit ? "Save Changes" : "Add Lead"}
+          {mutationError ? (
+            <div className="border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
+              {mutationError instanceof Error
+                ? mutationError.message
+                : "Lead could not be saved."}
+            </div>
+          ) : null}
+
+          <div className="flex flex-col-reverse gap-2 border-t border-border pt-4 sm:flex-row sm:justify-end">
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={!canSubmit}>
+              {isPending
+                ? "Saving…"
+                : initialData
+                  ? "Save Changes"
+                  : "Create Lead"}
             </Button>
           </div>
-
         </form>
       </DialogContent>
     </Dialog>
