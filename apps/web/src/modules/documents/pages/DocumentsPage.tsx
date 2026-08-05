@@ -169,13 +169,17 @@ function UploadDocumentDialog({
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="flex flex-col gap-1.5 md:col-span-2">
-              <Label>Document Name *</Label>
-              <Input value={name} onChange={(event) => setName(event.target.value)} />
+              <Label htmlFor="document-upload-name">Document Name *</Label>
+              <Input
+                id="document-upload-name"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+              />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label>Category</Label>
+              <Label htmlFor="document-upload-category">Category</Label>
               <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger id="document-upload-category"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {CATEGORY_OPTIONS.map((option) => (
                     <SelectItem key={option} value={option}>{option}</SelectItem>
@@ -184,9 +188,9 @@ function UploadDocumentDialog({
               </Select>
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label>Related Record Type</Label>
+              <Label htmlFor="document-upload-entity-type">Related Record Type</Label>
               <Select value={entityType} onValueChange={setEntityType}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger id="document-upload-entity-type"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {ENTITY_OPTIONS.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
@@ -198,8 +202,9 @@ function UploadDocumentDialog({
             </div>
             {entityType !== "none" ? (
               <div className="flex flex-col gap-1.5 md:col-span-2">
-                <Label>Related Record ID</Label>
+                <Label htmlFor="document-upload-entity-id">Related Record ID</Label>
                 <Input
+                  id="document-upload-entity-id"
                   value={entityId}
                   onChange={(event) => setEntityId(event.target.value)}
                   placeholder="Carrier, broker, load, invoice or transaction ID"
@@ -207,8 +212,13 @@ function UploadDocumentDialog({
               </div>
             ) : null}
             <div className="flex flex-col gap-1.5 md:col-span-2">
-              <Label>Notes</Label>
-              <Textarea rows={3} value={notes} onChange={(event) => setNotes(event.target.value)} />
+              <Label htmlFor="document-upload-notes">Notes</Label>
+              <Textarea
+                id="document-upload-notes"
+                rows={3}
+                value={notes}
+                onChange={(event) => setNotes(event.target.value)}
+              />
             </div>
           </div>
 
