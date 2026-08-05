@@ -21,7 +21,7 @@ test("uploads and deletes a private document with audited browser lifecycle", as
         "utf8",
       ),
     });
-    await dialog.locator('input[type="text"]').first().fill(documentName);
+    await dialog.getByLabel("Document Name *", { exact: true }).fill(documentName);
     await dialog
       .getByRole("button", { name: "Upload Document", exact: true })
       .click();
