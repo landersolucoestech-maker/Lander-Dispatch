@@ -1,6 +1,7 @@
 import process from 'node:process';
 
 const apiBaseUrl = process.env.API_BASE_URL ?? 'http://127.0.0.1:5000';
+const browserOrigin = 'http://127.0.0.1:3000';
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -46,12 +47,42 @@ const targetResponse = await fetch(`${apiBaseUrl}/api/storage/uploads/request-ur
 assert(targetResponse.ok, `Document upload target failed with ${targetResponse.status}.`);
 const target = await readJson(targetResponse, 'Document upload target');
 
+const preflightResponse = await fetch(target.uploadURL, {
+  method: 'OPTIONS',
+  headers: {
+    Origin: browserOrigin,
+    'Access-Control-Request-Method': 'PUT',
+    'Access-Control-Request-Headers': 'content-type',
+  },
+});
+assert(
+  preflightResponse.ok,
+  `MinIO browser upload preflight failed with ${preflightResponse.status}.`,
+);
+assert(
+  preflightResponse.headers.get('access-control-allow-origin') === browserOrigin,
+  `MinIO preflight did not allow ${browserOrigin}.`,
+);
+assert(
+  (preflightResponse.headers.get('access-control-allow-methods') ?? '')
+    .toUpperCase()
+    .includes('PUT'),
+  'MinIO preflight did not allow PUT.',
+);
+
 const uploadResponse = await fetch(target.uploadURL, {
   method: 'PUT',
-  headers: { 'content-type': 'text/plain' },
+  headers: {
+    Origin: browserOrigin,
+    'content-type': 'text/plain',
+  },
   body: payload,
 });
 assert(uploadResponse.ok, `Document object upload failed with ${uploadResponse.status}.`);
+assert(
+  uploadResponse.headers.get('access-control-allow-origin') === browserOrigin,
+  'MinIO upload response did not include the allowed browser origin.',
+);
 
 const createResponse = await fetch(`${apiBaseUrl}/api/documents`, {
   method: 'POST',
