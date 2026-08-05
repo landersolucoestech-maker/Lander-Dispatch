@@ -19,9 +19,51 @@ import {
 import { listAuditLogs, type AuditLogRecord } from "../api";
 
 const ACTION_OPTIONS = [
+  "carrier.created",
+  "carrier.updated",
+  "carrier.deleted",
+  "broker.created",
+  "broker.updated",
+  "broker.deleted",
+  "load.created",
+  "load.updated",
+  "load.deleted",
+  "contact.created",
+  "contact.updated",
+  "contact.deleted",
+  "lead.created",
+  "lead.updated",
+  "lead.converted",
+  "lead.deleted",
+  "driver.created",
+  "driver.updated",
+  "driver.deleted",
+  "invoice.created",
+  "invoice.updated",
+  "invoice.payment.recorded",
+  "invoice.deleted",
+  "transaction.created",
+  "transaction.updated",
+  "transaction.deleted",
+  "company_profile.updated",
   "document.created",
   "document.updated",
   "document.deleted",
+  "development.seed.completed",
+] as const;
+
+const ENTITY_TYPES = [
+  ["carrier", "Carrier"],
+  ["broker", "Broker"],
+  ["load", "Load"],
+  ["contact", "Contact"],
+  ["lead", "Lead"],
+  ["driver", "Driver"],
+  ["invoice", "Invoice"],
+  ["transaction", "Transaction"],
+  ["company_profile", "Company Profile"],
+  ["document", "Document"],
+  ["development_dataset", "Development Dataset"],
 ] as const;
 
 function formatDateTime(value: string) {
@@ -38,12 +80,16 @@ function formatDateTime(value: string) {
 function ActionBadge({ action }: { action: string }) {
   const tone = action.endsWith(".deleted")
     ? "border-destructive/40 bg-destructive/5 text-destructive"
-    : action.endsWith(".created")
+    : action.endsWith(".created") || action.endsWith(".completed")
       ? "border-emerald-500/40 bg-emerald-500/5 text-emerald-700"
-      : "border-blue-500/40 bg-blue-500/5 text-blue-700";
+      : action.endsWith(".converted") || action.includes("payment")
+        ? "border-violet-500/40 bg-violet-500/5 text-violet-700"
+        : "border-blue-500/40 bg-blue-500/5 text-blue-700";
 
   return (
-    <span className={`inline-flex border px-2 py-1 text-[10px] font-semibold uppercase tracking-wide ${tone}`}>
+    <span
+      className={`inline-flex border px-2 py-1 text-[10px] font-semibold uppercase tracking-wide ${tone}`}
+    >
       {action.replaceAll(".", " ")}
     </span>
   );
@@ -90,31 +136,41 @@ export default function AuditLogPage() {
       <header>
         <h1 className="text-2xl font-bold tracking-tight">AUDIT LOG</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Immutable operational history for security, accountability and troubleshooting.
+          Read-only operational history for security, accountability and troubleshooting.
         </p>
       </header>
 
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="border border-border bg-card p-4">
           <div className="flex items-center justify-between">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Recorded Events</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Recorded Events
+            </p>
             <Activity className="h-4 w-4 text-primary" />
           </div>
           <p className="mt-2 text-2xl font-bold">{meta?.total ?? 0}</p>
         </div>
         <div className="border border-border bg-card p-4">
           <div className="flex items-center justify-between">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Audit Mode</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Audit Mode
+            </p>
             <ShieldCheck className="h-4 w-4 text-primary" />
           </div>
-          <p className="mt-2 text-sm font-semibold text-emerald-600">Read-only history</p>
+          <p className="mt-2 text-sm font-semibold text-emerald-600">
+            Read-only history
+          </p>
         </div>
         <div className="border border-border bg-card p-4">
           <div className="flex items-center justify-between">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Current Coverage</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Current Coverage
+            </p>
             <FileClock className="h-4 w-4 text-primary" />
           </div>
-          <p className="mt-2 text-sm font-semibold">Document lifecycle</p>
+          <p className="mt-2 text-sm font-semibold">
+            Operational and financial mutations
+          </p>
         </div>
       </section>
 
@@ -138,11 +194,15 @@ export default function AuditLogPage() {
             setPage(1);
           }}
         >
-          <SelectTrigger className="w-full lg:w-56"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-full lg:w-64">
+            <SelectValue />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All actions</SelectItem>
             {ACTION_OPTIONS.map((option) => (
-              <SelectItem key={option} value={option}>{option}</SelectItem>
+              <SelectItem key={option} value={option}>
+                {option}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -153,10 +213,16 @@ export default function AuditLogPage() {
             setPage(1);
           }}
         >
-          <SelectTrigger className="w-full lg:w-48"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-full lg:w-52">
+            <SelectValue />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All entity types</SelectItem>
-            <SelectItem value="document">Document</SelectItem>
+            {ENTITY_TYPES.map(([value, label]) => (
+              <SelectItem key={value} value={value}>
+                {label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </section>
@@ -165,9 +231,17 @@ export default function AuditLogPage() {
         <div className="border border-destructive/40 bg-card p-10 text-center">
           <p className="font-semibold">Audit events could not be loaded.</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            {query.error instanceof Error ? query.error.message : "Unknown API error."}
+            {query.error instanceof Error
+              ? query.error.message
+              : "Unknown API error."}
           </p>
-          <Button className="mt-4" variant="outline" onClick={() => void query.refetch()}>Retry</Button>
+          <Button
+            className="mt-4"
+            variant="outline"
+            onClick={() => void query.refetch()}
+          >
+            Retry
+          </Button>
         </div>
       ) : query.isLoading ? (
         <div className="border border-border bg-card p-12 text-center text-sm text-muted-foreground">
@@ -218,10 +292,20 @@ export default function AuditLogPage() {
             Page {meta.page} of {meta.totalPages} · {meta.total} events
           </p>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((value) => value - 1)}>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page <= 1}
+              onClick={() => setPage((value) => value - 1)}
+            >
               Previous
             </Button>
-            <Button variant="outline" size="sm" disabled={page >= meta.totalPages} onClick={() => setPage((value) => value + 1)}>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page >= meta.totalPages}
+              onClick={() => setPage((value) => value + 1)}
+            >
               Next
             </Button>
           </div>
