@@ -4,6 +4,7 @@ import {
   useGetCompanyProfile,
   useUpdateCompanyProfile,
 } from "@workspace/api-client-react";
+import type { CompanyProfile } from "@workspace/api-client-react";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
@@ -97,7 +98,7 @@ function Field({
   );
 }
 
-function profileToForm(profile: ReturnType<typeof useGetCompanyProfile>["data"]): FormState {
+function profileToForm(profile?: CompanyProfile): FormState {
   if (!profile) return EMPTY_FORM;
 
   return {
