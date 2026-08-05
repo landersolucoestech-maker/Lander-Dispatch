@@ -147,6 +147,8 @@ export default function ProfitLossPage() {
   );
 
   const pnl = profitLossQuery.data;
+  const revenueLines = pnl?.revenueLines ?? [];
+  const expenseLines = pnl?.expenseLines ?? [];
   const periodLabel = PERIODS.find((item) => item.value === period)?.label ?? period;
 
   const handleExport = () => {
@@ -155,11 +157,11 @@ export default function ProfitLossPage() {
     downloadCsv(`lander-dispatch-profit-loss-${period.toLowerCase()}.csv`, [
       ["Lander Dispatch Profit & Loss", periodLabel],
       ["Revenue Category", "Amount"],
-      ...pnl.revenueLines.map((line) => [line.category, line.amount.toFixed(2)]),
+      ...revenueLines.map((line) => [line.category, line.amount.toFixed(2)]),
       ["Total Revenue", pnl.totalRevenue.toFixed(2)],
       [],
       ["Expense Category", "Amount"],
-      ...pnl.expenseLines.map((line) => [line.category, line.amount.toFixed(2)]),
+      ...expenseLines.map((line) => [line.category, line.amount.toFixed(2)]),
       ["Total Expenses", pnl.totalExpenses.toFixed(2)],
       [],
       ["Net Profit", pnl.netProfit.toFixed(2)],
@@ -247,13 +249,13 @@ export default function ProfitLossPage() {
           <section className="grid grid-cols-1 gap-6 xl:grid-cols-2">
             <Breakdown
               title="Revenue Breakdown"
-              lines={pnl.revenueLines}
+              lines={revenueLines}
               total={pnl.totalRevenue}
               tone="positive"
             />
             <Breakdown
               title="Expense Breakdown"
-              lines={pnl.expenseLines}
+              lines={expenseLines}
               total={pnl.totalExpenses}
               tone="negative"
             />
