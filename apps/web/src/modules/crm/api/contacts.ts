@@ -109,6 +109,18 @@ async function requestContact(
   return response.json() as Promise<GenericContactRecord>;
 }
 
+export async function getGenericContact(
+  contactId: string,
+): Promise<GenericContactRecord> {
+  const response = await fetch(`/api/crm/contacts/${contactId}`, {
+    credentials: "same-origin",
+    headers: { Accept: "application/json" },
+  });
+
+  if (!response.ok) throw await readError(response);
+  return response.json() as Promise<GenericContactRecord>;
+}
+
 export function createGenericContact(
   data: GenericContactInput,
 ): Promise<GenericContactRecord> {
