@@ -16,6 +16,7 @@ import BrokerDetailPage from '@/modules/brokers/pages/BrokerDetailPage';
 import CRMPage from '@/modules/crm/pages/CRMPage';
 import LeadDetailPage from '@/modules/crm/pages/LeadDetailPage';
 import ContactDetailPage from '@/modules/crm/pages/ContactDetailPage';
+import DriverDetailPage from '@/modules/crm/pages/DriverDetailPage';
 import InvoicesListPage from '@/modules/accounting/pages/InvoicesListPage';
 import InvoiceDetailPage from '@/modules/accounting/pages/InvoiceDetailPage';
 import TransactionsListPage from '@/modules/accounting/pages/TransactionsListPage';
@@ -100,6 +101,7 @@ function AppRouter() {
         <Route path="/crm" component={CRMPage} />
         <Route path="/crm/leads/:leadId" component={LeadDetailPage} />
         <Route path="/crm/contacts/:contactId" component={ContactDetailPage} />
+        <Route path="/crm/drivers/:driverId" component={DriverDetailPage} />
 
         <Route path="/accounting/invoices" component={InvoicesListPage} />
         <Route path="/accounting/invoices/:invoiceId" component={InvoiceDetailPage} />
