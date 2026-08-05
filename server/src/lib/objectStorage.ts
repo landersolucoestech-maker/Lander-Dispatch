@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { Readable } from 'node:stream';
 import {
+  DeleteObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
   PutObjectCommand,
@@ -203,5 +204,15 @@ export class ObjectStorageService {
       key,
       isPublic: false,
     };
+  }
+
+  async deleteObjectEntity(objectPath: string): Promise<void> {
+    const object = await this.getObjectEntityFile(objectPath);
+    await this.client.send(
+      new DeleteObjectCommand({
+        Bucket: object.bucket,
+        Key: object.key,
+      }),
+    );
   }
 }
