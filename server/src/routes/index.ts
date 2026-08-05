@@ -2,12 +2,14 @@ import { Router, type IRouter } from "express";
 
 import { requireAuthenticated } from "../middlewares/authMiddleware";
 import accountingRouter from "./accounting";
+import auditRouter from "./audit";
 import authRouter from "./auth";
 import brokersRouter from "./brokers";
 import carriersRouter from "./carriers";
 import crmDriversRouter from "./crm-drivers";
 import crmRouter from "./crm";
 import dashboardRouter from "./dashboard";
+import documentsRouter from "./documents";
 import healthRouter from "./health";
 import invoicesRouter from "./invoices";
 import loadsRouter from "./loads";
@@ -32,6 +34,8 @@ router.use(invoicesRouter);
 router.use(transactionsRouter);
 router.use(accountingRouter);
 router.use(settingsRouter);
+router.use(documentsRouter);
+router.use(auditRouter);
 router.use(storageRouter);
 
 export default router;
