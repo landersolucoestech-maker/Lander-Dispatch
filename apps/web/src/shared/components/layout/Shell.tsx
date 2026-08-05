@@ -176,7 +176,7 @@ function SidebarContent({
               {[user?.firstName, user?.lastName].filter(Boolean).join(" ") || "Operator"}
             </p>
             <p className="truncate text-[10px] uppercase tracking-wide text-slate-400">
-              {user?.role || "operator"}
+              {localMode ? "Local Owner" : "Authenticated User"}
             </p>
           </div>
         </div>
