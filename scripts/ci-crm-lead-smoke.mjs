@@ -146,7 +146,7 @@ const contactCreateResponse = await post("/api/crm/leads", {
   leadType: "Dealer",
   pipelineStage: "Proposal Sent",
   leadSource: "Referral",
-  priority: "Medium",
+  priority: "Normal",
   primaryContact: "CI Dealer Contact",
   phone: "+1 (407) 555-0992",
   email: `dealer-${suffix}@example.test`,
@@ -159,11 +159,15 @@ const contactCreateResponse = await post("/api/crm/leads", {
   estimatedWeeklyLoads: 5,
   estimatedWeeklyRevenue: 7500,
 });
+const contactCreateBody = await readJson(
+  contactCreateResponse,
+  "Dealer Lead creation",
+);
 assert(
   contactCreateResponse.status === 201,
-  `Dealer Lead creation failed with ${contactCreateResponse.status}.`,
+  `Dealer Lead creation failed with ${contactCreateResponse.status}: ${JSON.stringify(contactCreateBody)}`,
 );
-const contactLead = await readJson(contactCreateResponse, "Dealer Lead creation");
+const contactLead = contactCreateBody;
 assert(contactLead.state === "FL", "Lead state was not normalized to uppercase.");
 
 const contactConvertResponse = await post(
