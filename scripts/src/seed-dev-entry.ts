@@ -55,3 +55,4 @@ if (!canonical) {
 }
 
 await import("./seed-dev");
+await import("./harden-dev-database");
