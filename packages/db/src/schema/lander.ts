@@ -1,6 +1,6 @@
 import { pgTable, text, timestamp, uuid, integer, numeric, date, boolean, json, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
-import { z } from "zod";
+import { z } from "zod/v4";
 
 // ── Carriers ──────────────────────────────────────────────────────────────────
 export const carriersTable = pgTable("carriers", {
