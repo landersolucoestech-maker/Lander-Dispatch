@@ -17,6 +17,8 @@ export type LeadRecord = Omit<CrmLead, "freightTypes"> & {
   nextFollowUpDate?: string | null;
   nextFollowUpTime?: string | null;
   followUpNotes?: string | null;
+  convertedEntityType?: "Broker" | "Contact" | null;
+  convertedEntityId?: string | null;
   updatedAt?: string | null;
 };
 
@@ -52,6 +54,21 @@ export interface LeadMutationInput {
   selectedStates?: string | null;
 }
 
+export interface LeadConversionResult {
+  lead: LeadRecord;
+  convertedEntityType: "Broker" | "Contact";
+  convertedEntityId: string;
+}
+
+async function readError(response: Response): Promise<Error> {
+  const errorBody = (await response.json().catch(() => null)) as
+    | { error?: string }
+    | null;
+  return new Error(
+    errorBody?.error || `Lead request failed with status ${response.status}.`,
+  );
+}
+
 async function requestLead(
   path: string,
   method: "POST" | "PATCH",
@@ -67,15 +84,7 @@ async function requestLead(
     body: JSON.stringify(data),
   });
 
-  if (!response.ok) {
-    const errorBody = (await response.json().catch(() => null)) as
-      | { error?: string }
-      | null;
-    throw new Error(
-      errorBody?.error || `Lead request failed with status ${response.status}.`,
-    );
-  }
-
+  if (!response.ok) throw await readError(response);
   return response.json() as Promise<LeadRecord>;
 }
 
@@ -88,4 +97,17 @@ export function updateLead(
   data: LeadMutationInput,
 ): Promise<LeadRecord> {
   return requestLead(`/api/crm/leads/${leadId}`, "PATCH", data);
+}
+
+export async function convertLead(
+  leadId: string,
+): Promise<LeadConversionResult> {
+  const response = await fetch(`/api/crm/leads/${leadId}/convert`, {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { Accept: "application/json" },
+  });
+
+  if (!response.ok) throw await readError(response);
+  return response.json() as Promise<LeadConversionResult>;
 }
