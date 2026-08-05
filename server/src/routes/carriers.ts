@@ -57,7 +57,6 @@ const carrierExtensionSchema = z.object({
 
 type FleetEntryInput = z.infer<typeof fleetEntrySchema>;
 type CarrierExtensionInput = z.infer<typeof carrierExtensionSchema>;
-
 type DriverDetailsRow = typeof carrierFleetDriverDetailsTable.$inferSelect;
 
 const CONTACT_DETAIL_KEYS = [
@@ -347,12 +346,14 @@ router.get("/carriers", async (req, res): Promise<void> => {
 
 router.post("/carriers", async (req, res): Promise<void> => {
   const parsed = CreateCarrierBody.safeParse(req.body);
-  const extension = parseExtension(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
 
-  if (!parsed.success || !extension.success) {
-    res.status(400).json({
-      error: !parsed.success ? parsed.error.message : extension.error.message,
-    });
+  const extension = parseExtension(req.body);
+  if (!extension.success) {
+    res.status(400).json({ error: extension.error.message });
     return;
   }
 
@@ -399,12 +400,14 @@ router.get("/carriers/:carrierId", async (req, res): Promise<void> => {
 router.patch("/carriers/:carrierId", async (req, res): Promise<void> => {
   const { carrierId } = req.params as { carrierId: string };
   const parsed = UpdateCarrierBody.safeParse(req.body);
-  const extension = parseExtension(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
 
-  if (!parsed.success || !extension.success) {
-    res.status(400).json({
-      error: !parsed.success ? parsed.error.message : extension.error.message,
-    });
+  const extension = parseExtension(req.body);
+  if (!extension.success) {
+    res.status(400).json({ error: extension.error.message });
     return;
   }
 
