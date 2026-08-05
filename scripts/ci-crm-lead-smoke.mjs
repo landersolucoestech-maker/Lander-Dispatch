@@ -71,6 +71,42 @@ const brokerLead = await readJson(brokerCreateResponse, "Broker Lead creation");
 assert(brokerLead.leadType === "Broker", "Broker Lead lost its leadType.");
 assert(brokerLead.mcNumber?.startsWith("MC-CI-"), "Broker Lead lost MC Number.");
 
+const pipelineFilterResponse = await fetch(
+  `${apiBaseUrl}/api/crm/leads?status=Qualified&search=${encodeURIComponent(brokerLead.companyName)}`,
+);
+assert(
+  pipelineFilterResponse.ok,
+  `Legacy pipeline filter failed with ${pipelineFilterResponse.status}.`,
+);
+const pipelineFilter = await readJson(
+  pipelineFilterResponse,
+  "Legacy pipeline filter",
+);
+assert(
+  pipelineFilter.data?.some(
+    (lead) => lead.id === brokerLead.id && lead.pipelineStage === "Qualified",
+  ),
+  "status=Qualified did not filter by pipeline stage.",
+);
+
+const recordStatusFilterResponse = await fetch(
+  `${apiBaseUrl}/api/crm/leads?status=Active&search=${encodeURIComponent(brokerLead.companyName)}`,
+);
+assert(
+  recordStatusFilterResponse.ok,
+  `Record status filter failed with ${recordStatusFilterResponse.status}.`,
+);
+const recordStatusFilter = await readJson(
+  recordStatusFilterResponse,
+  "Record status filter",
+);
+assert(
+  recordStatusFilter.data?.some(
+    (lead) => lead.id === brokerLead.id && lead.status === "Active",
+  ),
+  "status=Active did not filter by record status.",
+);
+
 const brokerConvertResponse = await post(
   `/api/crm/leads/${brokerLead.id}/convert`,
   {},
