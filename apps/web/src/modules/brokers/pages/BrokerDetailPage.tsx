@@ -13,7 +13,6 @@ import {
   Pencil,
   Phone,
   ShieldCheck,
-  Star,
   Tags,
 } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
@@ -284,10 +283,6 @@ export default function BrokerDetailPage() {
           {broker.notes || "No notes available."}
         </p>
       </Section>
-
-      <section className="sr-only" aria-label="Broker rating indicator">
-        <Star aria-hidden="true" />
-      </section>
 
       <BrokerFormModal
         open={editing}
