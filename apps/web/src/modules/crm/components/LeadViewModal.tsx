@@ -1,4 +1,10 @@
 import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
+import {
+  getGetCrmLeadQueryKey,
+  getListCrmLeadsQueryKey,
+} from "@workspace/api-client-react";
 import type { CrmLead } from "@workspace/api-client-react";
 import {
   Dialog,
@@ -9,156 +15,336 @@ import {
 import { Button } from "@/shared/components/ui/button";
 import { StatusBadge } from "@/shared/components/ui/status-badge";
 import { formatCurrency, formatDate } from "@/shared/lib/utils";
+import {
+  ArrowRightCircle,
+  Building2,
+  CalendarClock,
+  MapPin,
+  Pencil,
+  Target,
+  UserRound,
+} from "lucide-react";
+import {
+  convertLead,
+  type LeadRecord,
+} from "../api/leads";
 import { LeadFormModal } from "./LeadFormModal";
-import { Pencil } from "lucide-react";
 
 interface Props {
   lead: CrmLead | null;
   onClose: () => void;
 }
 
-function Row({ label, value }: { label: string; value?: string | number | boolean | null }) {
-  const display = typeof value === "boolean" ? (value ? "Yes" : "No") : value;
-  if (display == null || display === "") return null;
+function DataField({
+  label,
+  value,
+  emphasized = false,
+}: {
+  label: string;
+  value?: string | number | null;
+  emphasized?: boolean;
+}) {
   return (
-    <div className="flex flex-col gap-0.5">
-      <span className="font-mono text-[10px] uppercase text-muted-foreground">{label}</span>
-      <span className="text-sm font-medium">{display}</span>
+    <div className="min-w-0">
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        {label}
+      </p>
+      <p
+        className={
+          emphasized
+            ? "mt-1 break-words text-sm font-bold text-primary"
+            : "mt-1 break-words text-sm font-medium"
+        }
+      >
+        {value == null || value === "" ? "—" : value}
+      </p>
     </div>
   );
 }
 
-function Section({ title }: { title: string }) {
+function Section({
+  title,
+  icon: Icon,
+  children,
+}: {
+  title: string;
+  icon: typeof Building2;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="border-t border-border pt-3">
-      <p className="font-mono text-[10px] uppercase text-muted-foreground mb-2">{title}</p>
+    <section className="border border-border bg-card p-4">
+      <div className="mb-4 flex items-center gap-2 border-b border-border pb-3">
+        <Icon className="h-4 w-4 text-primary" />
+        <h2 className="text-xs font-semibold uppercase tracking-wide">{title}</h2>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function TokenList({ values }: { values?: string[] | null }) {
+  if (!values?.length) {
+    return <p className="text-sm text-muted-foreground">Not configured.</p>;
+  }
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {values.map((value) => (
+        <span
+          key={value}
+          className="border border-border bg-muted/30 px-2 py-1 text-xs"
+        >
+          {value}
+        </span>
+      ))}
     </div>
   );
 }
 
 export function LeadViewModal({ lead, onClose }: Props) {
+  const [, navigate] = useLocation();
+  const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
+  const conversionMutation = useMutation({ mutationFn: convertLead });
+
   if (!lead) return null;
-  const d = lead as any;
-  const isBroker = d.leadType === "Broker";
+
+  const record = lead as LeadRecord;
+  const isBroker = record.leadType === "Broker";
+  const isConverted =
+    record.status === "Converted" || Boolean(record.convertedEntityId);
+
+  const handleConvert = () => {
+    const target = isBroker ? "Broker" : "Contact";
+    if (
+      !window.confirm(
+        `Convert ${record.companyName} into a ${target}? This will create the operational record and close the Lead as Won.`,
+      )
+    ) {
+      return;
+    }
+
+    conversionMutation.mutate(record.id, {
+      onSuccess: async (result) => {
+        await queryClient.invalidateQueries({
+          queryKey: getListCrmLeadsQueryKey(),
+        });
+        await queryClient.invalidateQueries({
+          queryKey: getGetCrmLeadQueryKey(record.id),
+        });
+        await queryClient.invalidateQueries({
+          queryKey:
+            result.convertedEntityType === "Broker"
+              ? ["brokers"]
+              : ["crm", "contacts"],
+        });
+
+        onClose();
+        navigate(
+          result.convertedEntityType === "Broker"
+            ? `/brokers/${result.convertedEntityId}`
+            : `/crm/contacts/${result.convertedEntityId}`,
+        );
+      },
+    });
+  };
 
   return (
     <>
-      <Dialog open={!!lead && !editing} onOpenChange={(v) => !v && onClose()}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <Dialog open={!editing} onOpenChange={(value) => !value && onClose()}>
+        <DialogContent className="max-h-[92vh] max-w-4xl overflow-y-auto">
           <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle className="font-mono uppercase tracking-widest text-sm">
-                {lead.companyName}
-              </DialogTitle>
-              <Button variant="outline" size="sm" className="gap-1 font-mono text-xs" onClick={() => setEditing(true)}>
-                <Pencil className="w-3 h-3" /> Edit
-              </Button>
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+              <div className="min-w-0">
+                <DialogTitle className="text-base font-semibold">
+                  {record.companyName}
+                </DialogTitle>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {record.leadType || "Lead type not configured"} · Demand prospect
+                </p>
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => setEditing(true)}
+                  disabled={isConverted}
+                >
+                  <Pencil className="h-4 w-4" />
+                  Edit Lead
+                </Button>
+                <Button
+                  size="sm"
+                  className="gap-2"
+                  onClick={handleConvert}
+                  disabled={isConverted || conversionMutation.isPending || !record.leadType}
+                >
+                  <ArrowRightCircle className="h-4 w-4" />
+                  {conversionMutation.isPending
+                    ? "Converting…"
+                    : isConverted
+                      ? "Converted"
+                      : `Convert to ${isBroker ? "Broker" : "Contact"}`}
+                </Button>
+              </div>
             </div>
           </DialogHeader>
 
-          <div className="mt-2 space-y-0">
-
-            {/* Pipeline */}
-            <div className="grid grid-cols-2 gap-4 pb-3">
-              <Row label="Lead Type" value={d.leadType} />
-              <Row label="Lead Source" value={d.leadSource} />
-            </div>
-            <div className="grid grid-cols-3 gap-4 pb-3">
-              <div className="flex flex-col gap-0.5">
-                <span className="font-mono text-[10px] uppercase text-muted-foreground">Pipeline Stage</span>
-                <StatusBadge status={lead.pipelineStage ?? "New Lead"} />
+          <div className="space-y-5">
+            <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="border border-border bg-card p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Pipeline Stage
+                </p>
+                <div className="mt-2">
+                  <StatusBadge status={record.pipelineStage} />
+                </div>
               </div>
-              <Row label="Priority" value={lead.priority} />
-              <Row label="Rating" value={lead.rating != null ? `${Number(lead.rating).toFixed(1)} / 5.0` : undefined} />
-              <Row label="Next Follow-Up" value={formatDate(d.nextFollowUpDate)} />
-              <Row label="Follow-Up Time" value={d.nextFollowUpTime} />
-              <Row label="Last Contact" value={formatDate(lead.lastContact)} />
-            </div>
-            {d.followUpNotes && (
-              <div className="pb-3">
-                <span className="font-mono text-[10px] uppercase text-muted-foreground">Follow-Up Notes</span>
-                <p className="text-sm mt-0.5 whitespace-pre-wrap">{d.followUpNotes}</p>
+              <div className="border border-border bg-card p-4">
+                <DataField label="Status" value={record.status} />
               </div>
-            )}
+              <div className="border border-border bg-card p-4">
+                <DataField label="Priority" value={record.priority} />
+              </div>
+              <div className="border border-border bg-card p-4">
+                <DataField
+                  label="Rating"
+                  value={
+                    record.rating == null
+                      ? "Not rated"
+                      : `${Number(record.rating).toFixed(1)} / 5.0`
+                  }
+                />
+              </div>
+            </section>
 
-            {/* Contact */}
-            <Section title="Contact" />
-            <div className="grid grid-cols-2 gap-4 pb-3">
-              <Row label="Primary Contact" value={lead.primaryContact} />
-              <Row label="Phone" value={lead.phone} />
-              <Row label="Email" value={lead.email} />
-              <Row label="Website" value={d.website} />
-            </div>
+            {isConverted ? (
+              <div className="border border-emerald-500/40 bg-emerald-500/5 p-4 text-sm">
+                <p className="font-semibold text-emerald-700">
+                  Lead converted successfully
+                </p>
+                <p className="mt-1 text-muted-foreground">
+                  Destination: {record.convertedEntityType || "Operational record"}
+                  {record.convertedEntityId
+                    ? ` · ${record.convertedEntityId}`
+                    : ""}
+                </p>
+              </div>
+            ) : null}
 
-            {/* Location */}
-            {(d.streetAddress || d.city || d.state || d.zipCode) && (
-              <>
-                <Section title="Location" />
-                <div className="pb-3 space-y-1">
-                  {d.streetAddress && <p className="text-sm">{d.streetAddress}</p>}
-                  <p className="text-sm">
-                    {[d.city, d.state, d.zipCode].filter(Boolean).join(", ")}
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+              <Section title="Contact" icon={UserRound}>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <DataField label="Primary Contact" value={record.primaryContact} />
+                  <DataField label="Phone" value={record.phone} />
+                  <DataField label="Email" value={record.email} />
+                  <DataField label="Website" value={record.website} />
+                  <DataField label="Lead Source" value={record.leadSource} />
+                  <DataField label="Last Contact" value={formatDate(record.lastContact)} />
+                </div>
+              </Section>
+
+              <Section title="Follow-Up" icon={CalendarClock}>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <DataField
+                    label="Next Follow-Up Date"
+                    value={formatDate(record.nextFollowUpDate)}
+                  />
+                  <DataField
+                    label="Next Follow-Up Time"
+                    value={record.nextFollowUpTime}
+                  />
+                </div>
+                {record.followUpNotes ? (
+                  <p className="mt-4 whitespace-pre-wrap text-sm text-muted-foreground">
+                    {record.followUpNotes}
                   </p>
-                </div>
-              </>
-            )}
-
-            {/* Broker fields */}
-            {isBroker && (
-              <>
-                <Section title="Broker — Identifiers" />
-                <div className="grid grid-cols-2 gap-4 pb-3">
-                  <Row label="Broker Type" value={d.brokerType} />
-                  <Row label="MC Number" value={d.mcNumber} />
-                  <Row label="USDOT Number" value={d.usdotNumber} />
-                </div>
-                <Section title="Broker — Coverage" />
-                <div className="grid grid-cols-2 gap-4 pb-3">
-                  <Row label="Coverage" value={d.coverage} />
-                  <Row label="Freight Types" value={d.freightTypes} />
-                  <Row label="Selected States" value={d.selectedStates} />
-                </div>
-              </>
-            )}
-
-            {/* Revenue Estimates */}
-            <Section title="Revenue Estimates" />
-            <div className="grid grid-cols-2 gap-4 pb-3">
-              <Row label="Est. Weekly Loads" value={lead.estimatedWeeklyLoads?.toString()} />
-              <Row
-                label="Est. Weekly Revenue"
-                value={lead.estimatedWeeklyRevenue != null ? formatCurrency(lead.estimatedWeeklyRevenue) : undefined}
-              />
+                ) : null}
+              </Section>
             </div>
 
-            {/* Tags */}
-            {lead.tags && lead.tags.length > 0 && (
-              <>
-                <Section title="Tags" />
-                <div className="pb-3 flex flex-wrap gap-1">
-                  {lead.tags.map((tag) => (
-                    <span key={tag} className="font-mono text-[10px] border border-border px-2 py-0.5 bg-card">{tag}</span>
-                  ))}
+            <Section title="Location" icon={MapPin}>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <DataField label="Street Address" value={record.streetAddress} />
+                <DataField label="City" value={record.city} />
+                <DataField label="State" value={record.state} />
+                <DataField label="ZIP Code" value={record.zipCode} />
+              </div>
+            </Section>
+
+            {isBroker ? (
+              <Section title="Broker Prospect Details" icon={Building2}>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <DataField label="Broker Type" value={record.brokerType} />
+                  <DataField label="MC Number" value={record.mcNumber} />
+                  <DataField label="USDOT Number" value={record.usdotNumber} />
+                  <DataField label="Coverage" value={record.coverage} />
+                  <DataField label="Freight Types" value={record.freightTypes} />
+                  <DataField label="Selected States" value={record.selectedStates} />
                 </div>
-              </>
-            )}
+              </Section>
+            ) : null}
 
-            {/* Notes */}
-            {lead.notes && (
-              <>
-                <Section title="Notes" />
-                <p className="text-sm whitespace-pre-wrap pb-3">{lead.notes}</p>
-              </>
-            )}
+            <Section title="Demand Profile" icon={Target}>
+              <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+                <div>
+                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Service Types
+                  </p>
+                  <TokenList values={record.serviceTypes} />
+                </div>
+                <div>
+                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Operating States
+                  </p>
+                  <TokenList values={record.operatingStates} />
+                </div>
+                <DataField
+                  label="Estimated Weekly Loads"
+                  value={record.estimatedWeeklyLoads}
+                />
+                <DataField
+                  label="Estimated Weekly Revenue"
+                  value={
+                    record.estimatedWeeklyRevenue == null
+                      ? null
+                      : formatCurrency(record.estimatedWeeklyRevenue)
+                  }
+                  emphasized
+                />
+              </div>
+            </Section>
 
+            {record.tags?.length ? (
+              <Section title="Tags" icon={Target}>
+                <TokenList values={record.tags} />
+              </Section>
+            ) : null}
+
+            <Section title="Notes" icon={Building2}>
+              <p className="whitespace-pre-wrap text-sm text-muted-foreground">
+                {record.notes || "No notes available."}
+              </p>
+            </Section>
+
+            {conversionMutation.isError ? (
+              <div className="border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
+                {conversionMutation.error instanceof Error
+                  ? conversionMutation.error.message
+                  : "Lead conversion failed."}
+              </div>
+            ) : null}
           </div>
         </DialogContent>
       </Dialog>
 
       <LeadFormModal
         open={editing}
-        onClose={() => { setEditing(false); onClose(); }}
+        onClose={() => {
+          setEditing(false);
+          onClose();
+        }}
         initialData={lead}
       />
     </>
