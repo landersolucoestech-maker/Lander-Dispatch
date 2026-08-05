@@ -9,28 +9,70 @@ import {
 import { Button } from "@/shared/components/ui/button";
 import { StatusBadge } from "@/shared/components/ui/status-badge";
 import { formatDate } from "@/shared/lib/utils";
+import {
+  Building2,
+  CreditCard,
+  MapPinned,
+  Pencil,
+  Phone,
+  ShieldCheck,
+} from "lucide-react";
 import { BrokerFormModal } from "./BrokerFormModal";
-import { Pencil } from "lucide-react";
 
 interface Props {
   broker: Broker | null;
   onClose: () => void;
 }
 
-function Row({ label, value }: { label: string; value?: string | number | boolean | null }) {
+function DataField({
+  label,
+  value,
+}: {
+  label: string;
+  value?: string | number | boolean | null;
+}) {
   const display = typeof value === "boolean" ? (value ? "Yes" : "No") : value;
+
   return (
-    <div className="flex flex-col gap-0.5">
-      <span className="font-mono text-[10px] uppercase text-muted-foreground">{label}</span>
-      <span className="text-sm font-medium">{display ?? "—"}</span>
+    <div className="min-w-0">
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        {label}
+      </p>
+      <p className="mt-1 break-words text-sm font-medium">{display ?? "—"}</p>
     </div>
   );
 }
 
-function Section({ title }: { title: string }) {
+function Section({
+  title,
+  icon: Icon,
+  children,
+}: {
+  title: string;
+  icon: typeof Building2;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="border-t border-border pt-3">
-      <p className="font-mono text-[10px] uppercase text-muted-foreground mb-2">{title}</p>
+    <section className="border border-border bg-card p-4">
+      <div className="mb-4 flex items-center gap-2 border-b border-border pb-3">
+        <Icon className="h-4 w-4 text-primary" />
+        <h2 className="text-xs font-semibold uppercase tracking-wide">{title}</h2>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function TokenList({ values }: { values?: string[] | null }) {
+  if (!values?.length) return <p className="text-sm text-muted-foreground">Not configured.</p>;
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {values.map((value) => (
+        <span key={value} className="border border-border bg-muted/30 px-2 py-1 text-xs">
+          {value}
+        </span>
+      ))}
     </div>
   );
 }
@@ -41,120 +83,120 @@ export function BrokerViewModal({ broker, onClose }: Props) {
 
   return (
     <>
-      <Dialog open={!!broker && !editing} onOpenChange={(v) => !v && onClose()}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <Dialog open={!editing} onOpenChange={(value) => !value && onClose()}>
+        <DialogContent className="max-h-[92vh] max-w-4xl overflow-y-auto">
           <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle className="font-mono uppercase tracking-widest text-sm">
-                {broker.companyName}
-              </DialogTitle>
-              <Button variant="outline" size="sm" className="gap-1 font-mono text-xs" onClick={() => setEditing(true)}>
-                <Pencil className="w-3 h-3" /> Edit
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <DialogTitle className="text-base font-semibold">{broker.companyName}</DialogTitle>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  MC {broker.mcNumber || "not configured"} · USDOT {broker.usdotNumber || "not configured"}
+                </p>
+              </div>
+              <Button variant="outline" size="sm" className="gap-2" onClick={() => setEditing(true)}>
+                <Pencil className="h-4 w-4" />
+                Edit Broker
               </Button>
             </div>
           </DialogHeader>
 
-          <div className="mt-2 space-y-0">
-
-            {/* Identity */}
-            <div className="grid grid-cols-2 gap-4 pb-3">
-              <div className="flex flex-col gap-0.5">
-                <span className="font-mono text-[10px] uppercase text-muted-foreground">Status</span>
-                <StatusBadge status={broker.status} />
+          <div className="space-y-5">
+            <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="border border-border bg-card p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Status</p>
+                <div className="mt-2"><StatusBadge status={broker.status} /></div>
               </div>
-              <Row label="Type" value={broker.brokerType} />
-              <Row label="Priority" value={broker.priority} />
-              <Row label="Rating" value={broker.rating != null ? `${broker.rating.toFixed(1)} / 5.0` : undefined} />
-              <Row label="Website" value={broker.website} />
-              <Row label="Onboarding Status" value={broker.onboardingStatus} />
-            </div>
+              <div className="border border-border bg-card p-4">
+                <DataField label="Broker Type" value={broker.brokerType} />
+              </div>
+              <div className="border border-border bg-card p-4">
+                <DataField label="Priority" value={broker.priority} />
+              </div>
+              <div className="border border-border bg-card p-4">
+                <DataField
+                  label="Rating"
+                  value={broker.rating == null ? "Not rated" : `${broker.rating.toFixed(1)} / 5.0`}
+                />
+              </div>
+            </section>
 
-            {/* Identifiers */}
-            <Section title="Identifiers" />
-            <div className="grid grid-cols-2 gap-4 pb-3">
-              <Row label="MC Number" value={broker.mcNumber} />
-              <Row label="USDOT Number" value={broker.usdotNumber} />
-            </div>
-
-            {/* Contact */}
-            <Section title="Contact" />
-            <div className="grid grid-cols-2 gap-4 pb-3">
-              <Row label="Primary Contact" value={broker.primaryContact} />
-              <Row label="Phone" value={broker.phone} />
-              <Row label="Email" value={broker.email} />
-              <Row label="Last Contact" value={formatDate(broker.lastContact)} />
-            </div>
-
-            {/* Coverage */}
-            {(broker.coverage || (broker.freightTypes && broker.freightTypes.length > 0) || (broker.selectedStates && broker.selectedStates.length > 0)) && (
-              <>
-                <Section title="Coverage" />
-                <div className="pb-3 space-y-2">
-                  {broker.coverage && <Row label="Coverage Area" value={broker.coverage} />}
-                  {broker.freightTypes && broker.freightTypes.length > 0 && (
-                    <div>
-                      <span className="font-mono text-[10px] uppercase text-muted-foreground">Freight Types</span>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {broker.freightTypes.map((t) => (
-                          <span key={t} className="font-mono text-[10px] border border-border px-2 py-0.5 bg-card">{t}</span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {broker.selectedStates && broker.selectedStates.length > 0 && (
-                    <div>
-                      <span className="font-mono text-[10px] uppercase text-muted-foreground">Selected States</span>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {broker.selectedStates.map((s) => (
-                          <span key={s} className="font-mono text-[10px] border border-border px-2 py-0.5 bg-card">{s}</span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+              <Section title="Company & Contact" icon={Building2}>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <DataField label="Primary Contact" value={broker.primaryContact} />
+                  <DataField label="Phone" value={broker.phone} />
+                  <DataField label="Email" value={broker.email} />
+                  <DataField label="Website" value={broker.website} />
+                  <DataField label="Last Contact" value={formatDate(broker.lastContact)} />
+                  <DataField label="Onboarding Status" value={broker.onboardingStatus} />
                 </div>
-              </>
-            )}
+              </Section>
 
-            {/* Payment Terms */}
-            <Section title="Payment Terms" />
-            <div className="grid grid-cols-2 gap-4 pb-3">
-              <Row label="Terms" value={broker.paymentTerms} />
-              <Row label="Payment Days" value={broker.paymentDays?.toString()} />
-              <Row label="QuickPay" value={broker.quickPay} />
-              {broker.quickPayFee != null && (
-                <Row label="QuickPay Fee" value={`${broker.quickPayFee}%`} />
-              )}
-              <Row label="Factoring Accepted" value={broker.factoringAccepted} />
+              <Section title="Authority" icon={ShieldCheck}>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <DataField label="MC Number" value={broker.mcNumber} />
+                  <DataField label="USDOT Number" value={broker.usdotNumber} />
+                  <DataField label="Status" value={broker.status} />
+                  <DataField label="Priority" value={broker.priority} />
+                </div>
+              </Section>
             </div>
 
-            {/* Tags */}
-            {broker.tags && broker.tags.length > 0 && (
-              <>
-                <Section title="Tags" />
-                <div className="pb-3 flex flex-wrap gap-1">
-                  {broker.tags.map((tag) => (
-                    <span key={tag} className="font-mono text-[10px] border border-border px-2 py-0.5 bg-card">{tag}</span>
-                  ))}
+            <Section title="Coverage" icon={MapPinned}>
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+                <div>
+                  <DataField label="Coverage Area" value={broker.coverage} />
                 </div>
-              </>
-            )}
+                <div>
+                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Freight Types
+                  </p>
+                  <TokenList values={broker.freightTypes} />
+                </div>
+                <div>
+                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Selected States
+                  </p>
+                  <TokenList values={broker.selectedStates} />
+                </div>
+              </div>
+            </Section>
 
-            {/* Notes */}
-            {broker.notes && (
-              <>
-                <Section title="Notes" />
-                <p className="text-sm whitespace-pre-wrap pb-3">{broker.notes}</p>
-              </>
-            )}
+            <Section title="Payment Terms" icon={CreditCard}>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+                <DataField label="Terms" value={broker.paymentTerms} />
+                <DataField label="Payment Days" value={broker.paymentDays} />
+                <DataField label="QuickPay" value={broker.quickPay} />
+                <DataField
+                  label="QuickPay Fee"
+                  value={broker.quickPayFee == null ? "—" : `${broker.quickPayFee.toFixed(2)}%`}
+                />
+                <DataField label="Factoring Accepted" value={broker.factoringAccepted} />
+              </div>
+            </Section>
 
+            {broker.tags?.length ? (
+              <Section title="Tags" icon={Phone}>
+                <TokenList values={broker.tags} />
+              </Section>
+            ) : null}
+
+            <Section title="Notes" icon={Phone}>
+              <p className="whitespace-pre-wrap text-sm text-muted-foreground">
+                {broker.notes || "No notes available."}
+              </p>
+            </Section>
           </div>
         </DialogContent>
       </Dialog>
 
       <BrokerFormModal
         open={editing}
-        onClose={() => { setEditing(false); onClose(); }}
         initialData={broker}
+        onClose={() => {
+          setEditing(false);
+          onClose();
+        }}
       />
     </>
   );
