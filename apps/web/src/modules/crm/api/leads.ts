@@ -76,11 +76,11 @@ function isLeadType(value: string | null | undefined): value is LeadType {
 export function normalizeLeadRecord(
   lead: CrmLead | LeadRecord,
 ): LeadRecord {
-  const rawFreightTypes = lead.freightTypes;
+  const extended = lead as LeadRecord;
+  const rawFreightTypes = extended.freightTypes;
   const freightTypes = Array.isArray(rawFreightTypes)
     ? rawFreightTypes.join(", ")
     : rawFreightTypes ?? null;
-  const extended = lead as LeadRecord;
 
   return {
     ...lead,
