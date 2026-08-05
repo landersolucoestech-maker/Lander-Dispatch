@@ -6,7 +6,11 @@
     "emitDeclarationOnly": true,
     "outDir": "dist",
     "rootDir": "src",
-    "types": ["node"]
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "zod": ["../../node_modules/zod/v4"]
+    }
   },
   "include": ["src"]
 }
