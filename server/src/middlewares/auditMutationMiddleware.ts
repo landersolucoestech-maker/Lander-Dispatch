@@ -18,38 +18,33 @@ const ENTITY_NAMES: Record<string, string> = {
   invoices: "invoice",
   transactions: "transaction",
   settings: "company_profile",
-  crm: "crm_record",
   "crm-drivers": "driver",
 };
+
+interface AuditMutationEvent {
+  action: string;
+  entityType: string;
+  entityId: string | null;
+  summary: string;
+}
 
 function shouldAudit(req: Request): boolean {
   if (!["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) return false;
   return !IGNORED_PREFIXES.some((prefix) => req.path.startsWith(prefix));
 }
 
-function resolveEvent(req: Request) {
-  const segments = req.path.split("/").filter(Boolean);
-  const root = segments[0] ?? "record";
-  const entityType = (ENTITY_NAMES[root] ?? root.replace(/s$/, "")) || "record";
-  const entityId = segments[1] && segments[1] !== "overview" ? segments[1] : null;
-  const isPayment = root === "invoices" && segments[2] === "payments";
+function mutationVerb(method: string): "created" | "updated" | "deleted" {
+  if (method === "POST") return "created";
+  if (method === "DELETE") return "deleted";
+  return "updated";
+}
 
-  if (isPayment) {
-    return {
-      action: "invoice.payment.recorded",
-      entityType: "invoice",
-      entityId,
-      summary: `Recorded payment for invoice ${entityId ?? "record"}`,
-    };
-  }
-
-  const verb =
-    req.method === "POST"
-      ? "created"
-      : req.method === "DELETE"
-        ? "deleted"
-        : "updated";
-
+function standardEvent(
+  method: string,
+  entityType: string,
+  entityId: string | null,
+): AuditMutationEvent {
+  const verb = mutationVerb(method);
   return {
     action: `${entityType}.${verb}`,
     entityType,
@@ -58,6 +53,47 @@ function resolveEvent(req: Request) {
       entityId ? ` ${entityId}` : ""
     }`,
   };
+}
+
+function resolveEvent(req: Request): AuditMutationEvent {
+  const segments = req.path.split("/").filter(Boolean);
+  const root = segments[0] ?? "record";
+
+  if (root === "crm") {
+    const collection = segments[1];
+    const entityType =
+      collection === "leads"
+        ? "lead"
+        : collection === "contacts"
+          ? "contact"
+          : "crm_record";
+    const entityId = segments[2] && segments[2] !== "overview" ? segments[2] : null;
+
+    if (collection === "leads" && segments[3] === "convert") {
+      return {
+        action: "lead.converted",
+        entityType: "lead",
+        entityId,
+        summary: `Converted lead${entityId ? ` ${entityId}` : ""} into an operational record`,
+      };
+    }
+
+    return standardEvent(req.method, entityType, entityId);
+  }
+
+  const entityType = (ENTITY_NAMES[root] ?? root.replace(/s$/, "")) || "record";
+  const entityId = segments[1] && segments[1] !== "overview" ? segments[1] : null;
+
+  if (root === "invoices" && segments[2] === "payments") {
+    return {
+      action: "invoice.payment.recorded",
+      entityType: "invoice",
+      entityId,
+      summary: `Recorded payment for invoice ${entityId ?? "record"}`,
+    };
+  }
+
+  return standardEvent(req.method, entityType, entityId);
 }
 
 export function auditMutationMiddleware(
