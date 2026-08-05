@@ -41,7 +41,7 @@ export function TransactionFormModal({ open, onClose, initialData }: Props) {
   const createMutation = useCreateTransaction();
   const updateMutation = useUpdateTransaction();
 
-  const { data: carriersData } = useListCarriers({ pageSize: 200 } as any);
+  const { data: carriersData } = useListCarriers({ page: 1, pageSize: 200 });
 
   const [form, setForm] = useState({
     type: "Expense",
@@ -118,139 +118,107 @@ export function TransactionFormModal({ open, onClose, initialData }: Props) {
     }
   };
 
-  const isPending = createMutation.isPending || updateMutation.isPending;
+  const pending = createMutation.isPending || updateMutation.isPending;
+  const error = createMutation.error || updateMutation.error;
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-mono uppercase tracking-widest text-sm">
-            {isEdit ? `Edit Transaction — ${initialData?.transactionId}` : "Create Transaction"}
+            {isEdit ? "Edit Transaction" : "New Transaction"}
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4 mt-2">
-          <div className="flex flex-col gap-1">
-            <Label className="font-mono text-xs">Type *</Label>
-            <Select
-              value={form.type}
-              onValueChange={(v) => setForm((p) => ({ ...p, type: v, category: "" }))}
-            >
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Expense">EXPENSE</SelectItem>
-                <SelectItem value="Income">INCOME</SelectItem>
-              </SelectContent>
-            </Select>
+        <form onSubmit={handleSubmit} className="space-y-5 mt-2">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1.5">
+              <Label>Type *</Label>
+              <Select value={form.type} onValueChange={(v) => setForm((p) => ({ ...p, type: v, category: "" }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Income">Income</SelectItem>
+                  <SelectItem value="Expense">Expense</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label>Category *</Label>
+              <Select value={form.category} onValueChange={(v) => setForm((p) => ({ ...p, category: v }))}>
+                <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                <SelectContent>
+                  {categories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1.5 col-span-2">
+              <Label>Description</Label>
+              <Input value={form.description} onChange={f("description")} placeholder="Transaction description" />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label>Amount *</Label>
+              <Input type="number" step="0.01" min="0" value={form.amount} onChange={f("amount")} required />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label>Status</Label>
+              <Select value={form.status} onValueChange={(v) => setForm((p) => ({ ...p, status: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Pending">Pending</SelectItem>
+                  <SelectItem value="Cleared">Cleared</SelectItem>
+                  <SelectItem value="Reconciled">Reconciled</SelectItem>
+                  <SelectItem value="Voided">Voided</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label>Date</Label>
+              <Input type="date" value={form.date} onChange={f("date")} />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label>Due Date</Label>
+              <Input type="date" value={form.dueDate} onChange={f("dueDate")} />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label>Carrier</Label>
+              <Select value={form.carrierId || "none"} onValueChange={(v) => setForm((p) => ({ ...p, carrierId: v === "none" ? "" : v }))}>
+                <SelectTrigger><SelectValue placeholder="Select carrier" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No carrier</SelectItem>
+                  {carriersData?.data?.map((carrier) => (
+                    <SelectItem key={carrier.id} value={carrier.id}>{carrier.companyName}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label>Invoice ID</Label>
+              <Input value={form.invoiceId} onChange={f("invoiceId")} placeholder="Related invoice UUID" />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label>Payment Method</Label>
+              <Input value={form.paymentMethod} onChange={f("paymentMethod")} />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label>Reference Number</Label>
+              <Input value={form.referenceNumber} onChange={f("referenceNumber")} />
+            </div>
+            <div className="flex flex-col gap-1.5 col-span-2">
+              <Label>Notes</Label>
+              <Textarea rows={3} value={form.notes} onChange={f("notes")} />
+            </div>
           </div>
 
-          <div className="flex flex-col gap-1">
-            <Label className="font-mono text-xs">Category *</Label>
-            <Select value={form.category} onValueChange={(v) => setForm((p) => ({ ...p, category: v }))}>
-              <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
-              <SelectContent>
-                {categories.map((c) => <SelectItem key={c} value={c}>{c.toUpperCase()}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
+          {error ? (
+            <p className="text-sm text-destructive">
+              {error instanceof Error ? error.message : "Transaction request failed."}
+            </p>
+          ) : null}
 
-          <div className="col-span-2 flex flex-col gap-1">
-            <Label className="font-mono text-xs">Description</Label>
-            <Input value={form.description} onChange={f("description")} placeholder="Brief description..." />
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <Label className="font-mono text-xs">Amount ($) *</Label>
-            <Input
-              required
-              type="number"
-              step="0.01"
-              min="0"
-              value={form.amount}
-              onChange={f("amount")}
-              placeholder="0.00"
-            />
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <Label className="font-mono text-xs">Status</Label>
-            <Select value={form.status} onValueChange={(v) => setForm((p) => ({ ...p, status: v }))}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Pending">PENDING</SelectItem>
-                <SelectItem value="Cleared">CLEARED</SelectItem>
-                <SelectItem value="Reconciled">RECONCILED</SelectItem>
-                <SelectItem value="Void">VOID</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <Label className="font-mono text-xs">Date</Label>
-            <Input type="date" value={form.date} onChange={f("date")} />
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label className="font-mono text-xs">Due Date</Label>
-            <Input type="date" value={form.dueDate} onChange={f("dueDate")} />
-          </div>
-
-          <div className="col-span-2 flex flex-col gap-1">
-            <Label className="font-mono text-xs">Carrier</Label>
-            <Select
-              value={form.carrierId || "__none__"}
-              onValueChange={(v) => setForm((p) => ({ ...p, carrierId: v === "__none__" ? "" : v }))}
-            >
-              <SelectTrigger><SelectValue placeholder="Link carrier (optional)" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">None</SelectItem>
-                {carriersData?.data.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>{c.companyName}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="col-span-2 flex flex-col gap-1">
-            <Label className="font-mono text-xs">Invoice ID <span className="text-muted-foreground">(link invoice)</span></Label>
-            <Input
-              value={form.invoiceId}
-              onChange={(e) => setForm((p) => ({ ...p, invoiceId: e.target.value }))}
-              placeholder="Invoice UUID or leave blank"
-            />
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <Label className="font-mono text-xs">Payment Method</Label>
-            <Select
-              value={form.paymentMethod || "__none__"}
-              onValueChange={(v) => setForm((p) => ({ ...p, paymentMethod: v === "__none__" ? "" : v }))}
-            >
-              <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">None</SelectItem>
-                <SelectItem value="Check">Check</SelectItem>
-                <SelectItem value="ACH">ACH</SelectItem>
-                <SelectItem value="Wire">Wire</SelectItem>
-                <SelectItem value="Credit Card">Credit Card</SelectItem>
-                <SelectItem value="Cash">Cash</SelectItem>
-                <SelectItem value="QuickPay">QuickPay</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label className="font-mono text-xs">Reference #</Label>
-            <Input value={form.referenceNumber} onChange={f("referenceNumber")} placeholder="CHK-1234" />
-          </div>
-
-          <div className="col-span-2 flex flex-col gap-1">
-            <Label className="font-mono text-xs">Notes</Label>
-            <Textarea value={form.notes} onChange={f("notes")} rows={3} />
-          </div>
-
-          <div className="col-span-2 flex justify-end gap-2 border-t border-border pt-4">
+          <div className="flex justify-end gap-2 border-t border-border pt-4">
             <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-            <Button type="submit" disabled={isPending || !form.category || !form.amount}>
-              {isPending ? "Saving..." : isEdit ? "Save Changes" : "Create Transaction"}
+            <Button type="submit" disabled={pending || !form.category || !form.amount}>
+              {pending ? "Saving…" : isEdit ? "Save Changes" : "Create Transaction"}
             </Button>
           </div>
         </form>
