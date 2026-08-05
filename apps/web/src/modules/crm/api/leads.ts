@@ -60,6 +60,48 @@ export interface LeadConversionResult {
   convertedEntityId: string;
 }
 
+function isLeadType(value: string | null | undefined): value is LeadType {
+  return [
+    "Broker",
+    "Direct Customer",
+    "Dealer",
+    "Shipper",
+    "Auction",
+    "Manufacturer",
+    "Fleet / Rental Company",
+    "Other",
+  ].includes(value ?? "");
+}
+
+export function normalizeLeadRecord(
+  lead: CrmLead | LeadRecord,
+): LeadRecord {
+  const rawFreightTypes = lead.freightTypes;
+  const freightTypes = Array.isArray(rawFreightTypes)
+    ? rawFreightTypes.join(", ")
+    : rawFreightTypes ?? null;
+  const extended = lead as LeadRecord;
+
+  return {
+    ...lead,
+    leadType: isLeadType(extended.leadType) ? extended.leadType : null,
+    streetAddress: extended.streetAddress ?? null,
+    zipCode: extended.zipCode ?? null,
+    brokerType: extended.brokerType ?? null,
+    coverage: extended.coverage ?? null,
+    freightTypes,
+    selectedStates: extended.selectedStates ?? null,
+    nextFollowUpDate:
+      extended.nextFollowUpDate ?? lead.nextFollowUp?.slice(0, 10) ?? null,
+    nextFollowUpTime: extended.nextFollowUpTime ?? null,
+    followUpNotes: extended.followUpNotes ?? null,
+    convertedEntityType: extended.convertedEntityType ?? null,
+    convertedEntityId:
+      extended.convertedEntityId ?? lead.convertedCarrierId ?? null,
+    updatedAt: extended.updatedAt ?? null,
+  };
+}
+
 async function readError(response: Response): Promise<Error> {
   const errorBody = (await response.json().catch(() => null)) as
     | { error?: string }
@@ -85,7 +127,19 @@ async function requestLead(
   });
 
   if (!response.ok) throw await readError(response);
-  return response.json() as Promise<LeadRecord>;
+  const lead = (await response.json()) as LeadRecord;
+  return normalizeLeadRecord(lead);
+}
+
+export async function getLead(leadId: string): Promise<LeadRecord> {
+  const response = await fetch(`/api/crm/leads/${leadId}`, {
+    credentials: "same-origin",
+    headers: { Accept: "application/json" },
+  });
+
+  if (!response.ok) throw await readError(response);
+  const lead = (await response.json()) as LeadRecord;
+  return normalizeLeadRecord(lead);
 }
 
 export function createLead(data: LeadMutationInput): Promise<LeadRecord> {
@@ -109,5 +163,9 @@ export async function convertLead(
   });
 
   if (!response.ok) throw await readError(response);
-  return response.json() as Promise<LeadConversionResult>;
+  const result = (await response.json()) as LeadConversionResult;
+  return {
+    ...result,
+    lead: normalizeLeadRecord(result.lead),
+  };
 }
