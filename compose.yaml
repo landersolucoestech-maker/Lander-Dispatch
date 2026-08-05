@@ -75,7 +75,7 @@ services:
         </CORSConfiguration>
         EOF
         mc cors set local/lander-dispatch-private /tmp/private-cors.xml
-        mc cors info local/lander-dispatch-private
+        mc cors get local/lander-dispatch-private
     networks:
       - lander_dispatch_local
 
