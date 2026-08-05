@@ -6,7 +6,7 @@
   "scripts": {
     "hello": "tsx ./src/hello.ts",
     "bootstrap-owner": "tsx ./src/bootstrap-owner.ts",
-    "seed-dev": "tsx ./src/seed-dev.ts",
+    "seed-dev": "tsx ./src/seed-dev-entry.ts",
     "verify-seed-dev": "tsx ./src/verify-dev-seed.ts",
     "verify-seed-guard": "tsx ./src/verify-dev-seed-guard.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
