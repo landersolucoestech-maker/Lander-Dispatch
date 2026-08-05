@@ -1,6 +1,9 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useCreateBroker, useUpdateBroker } from "@workspace/api-client-react";
+import {
+  useCreateBroker,
+  useUpdateBroker,
+} from "@workspace/api-client-react";
 import type { Broker } from "@workspace/api-client-react";
 import {
   Dialog,
@@ -26,343 +29,479 @@ interface Props {
   initialData?: Broker;
 }
 
+type BrokerFormState = {
+  companyName: string;
+  brokerType: string;
+  status: string;
+  priority: string;
+  website: string;
+  rating: string;
+  mcNumber: string;
+  usdotNumber: string;
+  primaryContact: string;
+  phone: string;
+  email: string;
+  lastContact: string;
+  coverage: string;
+  freightTypes: string;
+  selectedStates: string;
+  paymentTerms: string;
+  paymentDays: string;
+  quickPay: boolean;
+  quickPayFee: string;
+  factoringAccepted: string;
+  onboardingStatus: string;
+  tags: string;
+  notes: string;
+};
+
+const EMPTY_FORM: BrokerFormState = {
+  companyName: "",
+  brokerType: "",
+  status: "Active",
+  priority: "",
+  website: "",
+  rating: "",
+  mcNumber: "",
+  usdotNumber: "",
+  primaryContact: "",
+  phone: "",
+  email: "",
+  lastContact: "",
+  coverage: "",
+  freightTypes: "",
+  selectedStates: "",
+  paymentTerms: "",
+  paymentDays: "",
+  quickPay: false,
+  quickPayFee: "",
+  factoringAccepted: "",
+  onboardingStatus: "Not Started",
+  tags: "",
+  notes: "",
+};
+
+function brokerToForm(broker?: Broker): BrokerFormState {
+  if (!broker) return EMPTY_FORM;
+
+  return {
+    companyName: broker.companyName ?? "",
+    brokerType: broker.brokerType ?? "",
+    status: broker.status ?? "Active",
+    priority: broker.priority ?? "",
+    website: broker.website ?? "",
+    rating: broker.rating == null ? "" : String(broker.rating),
+    mcNumber: broker.mcNumber ?? "",
+    usdotNumber: broker.usdotNumber ?? "",
+    primaryContact: broker.primaryContact ?? "",
+    phone: broker.phone ?? "",
+    email: broker.email ?? "",
+    lastContact: broker.lastContact?.slice(0, 10) ?? "",
+    coverage: broker.coverage ?? "",
+    freightTypes: broker.freightTypes?.join(", ") ?? "",
+    selectedStates: broker.selectedStates?.join(", ") ?? "",
+    paymentTerms: broker.paymentTerms ?? "",
+    paymentDays: broker.paymentDays == null ? "" : String(broker.paymentDays),
+    quickPay: broker.quickPay ?? false,
+    quickPayFee: broker.quickPayFee == null ? "" : String(broker.quickPayFee),
+    factoringAccepted: broker.factoringAccepted ?? "",
+    onboardingStatus: broker.onboardingStatus ?? "Not Started",
+    tags: broker.tags?.join(", ") ?? "",
+    notes: broker.notes ?? "",
+  };
+}
+
+function Section({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="space-y-4 border border-border bg-card p-4 sm:p-5">
+      <div className="border-b border-border pb-3">
+        <h2 className="text-sm font-semibold uppercase tracking-wide">{title}</h2>
+        {description ? (
+          <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+        ) : null}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function Field({
+  label,
+  children,
+  className = "",
+}: {
+  label: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={`flex flex-col gap-1.5 ${className}`}>
+      <Label className="text-xs">{label}</Label>
+      {children}
+    </div>
+  );
+}
+
+function parseOptionalNumber(value: string): number | undefined {
+  if (!value.trim()) return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function parseList(value: string): string[] | undefined {
+  const values = value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+  return values.length ? values : undefined;
+}
+
 export function BrokerFormModal({ open, onClose, initialData }: Props) {
-  const qc = useQueryClient();
-  const isEdit = !!initialData;
+  const queryClient = useQueryClient();
   const createMutation = useCreateBroker();
   const updateMutation = useUpdateBroker();
-
-  const [form, setForm] = useState({
-    // Identity
-    companyName: "",
-    brokerType: "",
-    status: "Active",
-    priority: "",
-    website: "",
-    rating: "",
-    // Identifiers
-    mcNumber: "",
-    usdotNumber: "",
-    // Contact
-    primaryContact: "",
-    phone: "",
-    email: "",
-    lastContact: "",
-    // Coverage
-    coverage: "",
-    // Payment
-    paymentTerms: "",
-    paymentDays: "",
-    quickPay: false,
-    quickPayFee: "",
-    factoringAccepted: "",
-    // Onboarding
-    onboardingStatus: "",
-    // Other
-    notes: "",
-  });
-
-  // multi-value fields stored separately as comma-separated strings for easy editing
-  const [freightTypes, setFreightTypes] = useState("");
-  const [selectedStates, setSelectedStates] = useState("");
-  const [tags, setTags] = useState("");
+  const [form, setForm] = useState<BrokerFormState>(EMPTY_FORM);
 
   useEffect(() => {
-    if (initialData) {
-      setForm({
-        companyName: initialData.companyName ?? "",
-        brokerType: initialData.brokerType ?? "",
-        status: initialData.status ?? "Active",
-        priority: initialData.priority ?? "",
-        website: initialData.website ?? "",
-        rating: initialData.rating?.toString() ?? "",
-        mcNumber: initialData.mcNumber ?? "",
-        usdotNumber: initialData.usdotNumber ?? "",
-        primaryContact: initialData.primaryContact ?? "",
-        phone: initialData.phone ?? "",
-        email: initialData.email ?? "",
-        lastContact: initialData.lastContact?.slice(0, 10) ?? "",
-        coverage: initialData.coverage ?? "",
-        paymentTerms: initialData.paymentTerms ?? "",
-        paymentDays: initialData.paymentDays?.toString() ?? "",
-        quickPay: initialData.quickPay ?? false,
-        quickPayFee: initialData.quickPayFee?.toString() ?? "",
-        factoringAccepted: initialData.factoringAccepted ?? "",
-        onboardingStatus: initialData.onboardingStatus ?? "",
-        notes: initialData.notes ?? "",
-      });
-      setFreightTypes((initialData.freightTypes ?? []).join(", "));
-      setSelectedStates((initialData.selectedStates ?? []).join(", "));
-      setTags((initialData.tags ?? []).join(", "));
-    } else {
-      setForm({
-        companyName: "", brokerType: "", status: "Active", priority: "", website: "", rating: "",
-        mcNumber: "", usdotNumber: "",
-        primaryContact: "", phone: "", email: "", lastContact: "",
-        coverage: "",
-        paymentTerms: "", paymentDays: "", quickPay: false, quickPayFee: "", factoringAccepted: "",
-        onboardingStatus: "",
-        notes: "",
-      });
-      setFreightTypes("");
-      setSelectedStates("");
-      setTags("");
-    }
+    setForm(brokerToForm(initialData));
   }, [initialData, open]);
 
-  const f = (k: keyof typeof form) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-      setForm((p) => ({ ...p, [k]: e.target.value }));
+  const updateForm = <K extends keyof BrokerFormState>(
+    field: K,
+    value: BrokerFormState[K],
+  ) => {
+    setForm((previous) => ({ ...previous, [field]: value }));
+  };
 
-  const sel = (k: keyof typeof form) => (v: string) =>
-    setForm((p) => ({ ...p, [k]: v === "__none__" ? "" : v }));
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!form.companyName.trim()) return;
 
-  const splitArr = (s: string) =>
-    s.split(",").map((x) => x.trim()).filter(Boolean);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const s = (v: string) => v || undefined;
-
+    const optional = (value: string) => value.trim() || undefined;
     const payload = {
-      companyName: form.companyName,
-      brokerType: s(form.brokerType),
-      status: s(form.status),
-      priority: s(form.priority),
-      website: s(form.website),
-      rating: form.rating ? parseFloat(form.rating) : undefined,
-      mcNumber: s(form.mcNumber),
-      usdotNumber: s(form.usdotNumber),
-      primaryContact: s(form.primaryContact),
-      phone: s(form.phone),
-      email: s(form.email),
-      lastContact: s(form.lastContact),
-      coverage: s(form.coverage),
-      freightTypes: freightTypes ? splitArr(freightTypes) : undefined,
-      selectedStates: selectedStates ? splitArr(selectedStates) : undefined,
-      tags: tags ? splitArr(tags) : undefined,
-      paymentTerms: s(form.paymentTerms),
-      paymentDays: form.paymentDays ? parseInt(form.paymentDays) : undefined,
+      companyName: form.companyName.trim(),
+      brokerType: optional(form.brokerType),
+      status: form.status,
+      priority: optional(form.priority),
+      website: optional(form.website),
+      rating: parseOptionalNumber(form.rating),
+      mcNumber: optional(form.mcNumber),
+      usdotNumber: optional(form.usdotNumber),
+      primaryContact: optional(form.primaryContact),
+      phone: optional(form.phone),
+      email: optional(form.email),
+      lastContact: optional(form.lastContact),
+      coverage: optional(form.coverage),
+      freightTypes: parseList(form.freightTypes),
+      selectedStates: parseList(form.selectedStates),
+      paymentTerms: optional(form.paymentTerms),
+      paymentDays: parseOptionalNumber(form.paymentDays),
       quickPay: form.quickPay,
-      quickPayFee: form.quickPayFee ? parseFloat(form.quickPayFee) : undefined,
-      factoringAccepted: s(form.factoringAccepted),
-      onboardingStatus: s(form.onboardingStatus),
-      notes: s(form.notes),
+      quickPayFee: parseOptionalNumber(form.quickPayFee),
+      factoringAccepted: optional(form.factoringAccepted),
+      onboardingStatus: optional(form.onboardingStatus),
+      tags: parseList(form.tags),
+      notes: optional(form.notes),
     };
 
-    if (isEdit) {
+    const onSuccess = async () => {
+      await queryClient.invalidateQueries({ queryKey: ["brokers"] });
+      onClose();
+    };
+
+    if (initialData) {
       updateMutation.mutate(
-        { brokerId: initialData!.id, data: payload },
-        { onSuccess: () => { qc.invalidateQueries({ queryKey: ["brokers"] }); onClose(); } }
+        { brokerId: initialData.id, data: payload },
+        { onSuccess },
       );
-    } else {
-      createMutation.mutate(
-        { data: payload },
-        { onSuccess: () => { qc.invalidateQueries({ queryKey: ["brokers"] }); onClose(); } }
-      );
+      return;
     }
+
+    createMutation.mutate({ data: payload }, { onSuccess });
   };
 
   const isPending = createMutation.isPending || updateMutation.isPending;
-
-  const Section = ({ title }: { title: string }) => (
-    <div className="col-span-2 border-t border-border pt-3">
-      <p className="font-mono text-xs text-muted-foreground mb-3 uppercase tracking-widest">{title}</p>
-    </div>
-  );
+  const emailIsValid = !form.email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email);
+  const canSubmit = Boolean(form.companyName.trim()) && emailIsValid && !isPending;
 
   return (
-    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={open} onOpenChange={(value) => !value && onClose()}>
+      <DialogContent className="max-h-[94vh] max-w-5xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="font-mono uppercase tracking-widest text-sm">
-            {isEdit ? `Edit Broker — ${initialData?.companyName}` : "Add Broker"}
+          <DialogTitle className="text-base font-semibold">
+            {initialData ? `Edit Broker — ${initialData.companyName}` : "Create Broker"}
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4 mt-2">
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <Section
+            title="Company"
+            description="Broker identity, authority and internal qualification."
+          >
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <Field label="Company Name *" className="md:col-span-2">
+                <Input
+                  required
+                  value={form.companyName}
+                  onChange={(event) => updateForm("companyName", event.target.value)}
+                  placeholder="Broker company name"
+                />
+              </Field>
+              <Field label="Broker Type">
+                <Select
+                  value={form.brokerType || "__none__"}
+                  onValueChange={(value) =>
+                    updateForm("brokerType", value === "__none__" ? "" : value)
+                  }
+                >
+                  <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Not specified</SelectItem>
+                    <SelectItem value="Freight Broker">Freight Broker</SelectItem>
+                    <SelectItem value="Freight Forwarder">Freight Forwarder</SelectItem>
+                    <SelectItem value="3PL">3PL</SelectItem>
+                    <SelectItem value="Direct Shipper">Direct Shipper</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field label="Status">
+                <Select value={form.status} onValueChange={(value) => updateForm("status", value)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Active">Active</SelectItem>
+                    <SelectItem value="Inactive">Inactive</SelectItem>
+                    <SelectItem value="Pending">Pending</SelectItem>
+                    <SelectItem value="Blacklisted">Blacklisted</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field label="Priority">
+                <Select
+                  value={form.priority || "__none__"}
+                  onValueChange={(value) =>
+                    updateForm("priority", value === "__none__" ? "" : value)
+                  }
+                >
+                  <SelectTrigger><SelectValue placeholder="Select priority" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Not specified</SelectItem>
+                    <SelectItem value="High">High</SelectItem>
+                    <SelectItem value="Medium">Medium</SelectItem>
+                    <SelectItem value="Low">Low</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field label="Rating">
+                <Input
+                  type="number"
+                  min="0"
+                  max="5"
+                  step="0.1"
+                  value={form.rating}
+                  onChange={(event) => updateForm("rating", event.target.value)}
+                />
+              </Field>
+              <Field label="MC Number">
+                <Input
+                  value={form.mcNumber}
+                  onChange={(event) => updateForm("mcNumber", event.target.value)}
+                />
+              </Field>
+              <Field label="USDOT Number">
+                <Input
+                  value={form.usdotNumber}
+                  onChange={(event) => updateForm("usdotNumber", event.target.value)}
+                />
+              </Field>
+              <Field label="Website" className="md:col-span-2">
+                <Input
+                  value={form.website}
+                  onChange={(event) => updateForm("website", event.target.value)}
+                  placeholder="https://"
+                />
+              </Field>
+            </div>
+          </Section>
 
-          {/* ── Identity ── */}
-          <div className="col-span-2 flex flex-col gap-1">
-            <Label className="font-mono text-xs">Company Name *</Label>
-            <Input required value={form.companyName} onChange={f("companyName")} placeholder="XYZ Logistics Inc." />
-          </div>
+          <Section title="Contact" description="Primary communication and relationship tracking.">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <Field label="Primary Contact">
+                <Input
+                  value={form.primaryContact}
+                  onChange={(event) => updateForm("primaryContact", event.target.value)}
+                />
+              </Field>
+              <Field label="Phone">
+                <Input value={form.phone} onChange={(event) => updateForm("phone", event.target.value)} />
+              </Field>
+              <Field label="Email">
+                <Input
+                  type="email"
+                  value={form.email}
+                  onChange={(event) => updateForm("email", event.target.value)}
+                  aria-invalid={!emailIsValid}
+                />
+                {!emailIsValid ? (
+                  <p className="text-xs text-destructive">Enter a valid email address.</p>
+                ) : null}
+              </Field>
+              <Field label="Last Contact">
+                <Input
+                  type="date"
+                  value={form.lastContact}
+                  onChange={(event) => updateForm("lastContact", event.target.value)}
+                />
+              </Field>
+            </div>
+          </Section>
 
-          <div className="flex flex-col gap-1">
-            <Label className="font-mono text-xs">Broker Type</Label>
-            <Select value={form.brokerType || "__none__"} onValueChange={sel("brokerType")}>
-              <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">None</SelectItem>
-                <SelectItem value="Freight Broker">Freight Broker</SelectItem>
-                <SelectItem value="Freight Forwarder">Freight Forwarder</SelectItem>
-                <SelectItem value="3PL">3PL</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <Section title="Coverage" description="Freight profile and geographic operating scope.">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <Field label="Coverage Area" className="md:col-span-2">
+                <Input
+                  value={form.coverage}
+                  onChange={(event) => updateForm("coverage", event.target.value)}
+                  placeholder="Nationwide, Southeast, Midwest"
+                />
+              </Field>
+              <Field label="Freight Types">
+                <Input
+                  value={form.freightTypes}
+                  onChange={(event) => updateForm("freightTypes", event.target.value)}
+                  placeholder="Auto Transport, Dry Van, Flatbed"
+                />
+                <p className="text-[11px] text-muted-foreground">Separate values with commas.</p>
+              </Field>
+              <Field label="Selected States">
+                <Input
+                  value={form.selectedStates}
+                  onChange={(event) => updateForm("selectedStates", event.target.value.toUpperCase())}
+                  placeholder="FL, GA, TX"
+                />
+                <p className="text-[11px] text-muted-foreground">Use two-letter state codes.</p>
+              </Field>
+            </div>
+          </Section>
 
-          <div className="flex flex-col gap-1">
-            <Label className="font-mono text-xs">Status</Label>
-            <Select value={form.status} onValueChange={(v) => setForm((p) => ({ ...p, status: v }))}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Active">ACTIVE</SelectItem>
-                <SelectItem value="Inactive">INACTIVE</SelectItem>
-                <SelectItem value="Pending">PENDING</SelectItem>
-                <SelectItem value="Blacklisted">BLACKLISTED</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <Section title="Payment" description="Payment terms, QuickPay and factoring compatibility.">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
+              <Field label="Payment Terms">
+                <Select
+                  value={form.paymentTerms || "__none__"}
+                  onValueChange={(value) =>
+                    updateForm("paymentTerms", value === "__none__" ? "" : value)
+                  }
+                >
+                  <SelectTrigger><SelectValue placeholder="Select terms" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Not specified</SelectItem>
+                    <SelectItem value="Net 7">Net 7</SelectItem>
+                    <SelectItem value="Net 15">Net 15</SelectItem>
+                    <SelectItem value="Net 30">Net 30</SelectItem>
+                    <SelectItem value="Net 45">Net 45</SelectItem>
+                    <SelectItem value="Net 60">Net 60</SelectItem>
+                    <SelectItem value="QuickPay">QuickPay</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field label="Payment Days">
+                <Input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={form.paymentDays}
+                  onChange={(event) => updateForm("paymentDays", event.target.value)}
+                />
+              </Field>
+              <Field label="QuickPay Fee">
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.quickPayFee}
+                  onChange={(event) => updateForm("quickPayFee", event.target.value)}
+                />
+              </Field>
+              <Field label="Factoring Accepted">
+                <Select
+                  value={form.factoringAccepted || "__none__"}
+                  onValueChange={(value) =>
+                    updateForm("factoringAccepted", value === "__none__" ? "" : value)
+                  }
+                >
+                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Unknown</SelectItem>
+                    <SelectItem value="Yes">Yes</SelectItem>
+                    <SelectItem value="No">No</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+              <label className="flex min-h-10 items-center gap-3 border border-border px-3 text-sm">
+                <input
+                  type="checkbox"
+                  checked={form.quickPay}
+                  onChange={(event) => updateForm("quickPay", event.target.checked)}
+                  className="h-4 w-4"
+                />
+                QuickPay available
+              </label>
+            </div>
+          </Section>
 
-          <div className="flex flex-col gap-1">
-            <Label className="font-mono text-xs">Priority</Label>
-            <Select value={form.priority || "__none__"} onValueChange={sel("priority")}>
-              <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">None</SelectItem>
-                <SelectItem value="High">High</SelectItem>
-                <SelectItem value="Medium">Medium</SelectItem>
-                <SelectItem value="Low">Low</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <Section title="Relationship Management">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <Field label="Onboarding Status">
+                <Select
+                  value={form.onboardingStatus || "__none__"}
+                  onValueChange={(value) =>
+                    updateForm("onboardingStatus", value === "__none__" ? "" : value)
+                  }
+                >
+                  <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Not specified</SelectItem>
+                    <SelectItem value="Not Started">Not Started</SelectItem>
+                    <SelectItem value="In Progress">In Progress</SelectItem>
+                    <SelectItem value="Documents Pending">Documents Pending</SelectItem>
+                    <SelectItem value="Completed">Completed</SelectItem>
+                    <SelectItem value="Rejected">Rejected</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field label="Tags">
+                <Input
+                  value={form.tags}
+                  onChange={(event) => updateForm("tags", event.target.value)}
+                  placeholder="Preferred, High volume, Auto auctions"
+                />
+                <p className="text-[11px] text-muted-foreground">Separate values with commas.</p>
+              </Field>
+              <Field label="Notes" className="md:col-span-2">
+                <Textarea
+                  rows={4}
+                  value={form.notes}
+                  onChange={(event) => updateForm("notes", event.target.value)}
+                />
+              </Field>
+            </div>
+          </Section>
 
-          <div className="flex flex-col gap-1">
-            <Label className="font-mono text-xs">Rating (0–5)</Label>
-            <Input type="number" min="0" max="5" step="0.1" value={form.rating} onChange={f("rating")} placeholder="0.0" />
-          </div>
-
-          <div className="col-span-2 flex flex-col gap-1">
-            <Label className="font-mono text-xs">Website</Label>
-            <Input value={form.website} onChange={f("website")} placeholder="https://..." />
-          </div>
-
-          {/* ── Identifiers ── */}
-          <Section title="Identifiers" />
-
-          <div className="flex flex-col gap-1">
-            <Label className="font-mono text-xs">MC Number</Label>
-            <Input value={form.mcNumber} onChange={f("mcNumber")} placeholder="MC-123456" />
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label className="font-mono text-xs">USDOT Number</Label>
-            <Input value={form.usdotNumber} onChange={f("usdotNumber")} placeholder="DOT-1234567" />
-          </div>
-
-          {/* ── Contact ── */}
-          <Section title="Contact" />
-
-          <div className="flex flex-col gap-1">
-            <Label className="font-mono text-xs">Primary Contact</Label>
-            <Input value={form.primaryContact} onChange={f("primaryContact")} placeholder="Jane Smith" />
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label className="font-mono text-xs">Phone</Label>
-            <Input value={form.phone} onChange={f("phone")} placeholder="(555) 555-5555" />
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label className="font-mono text-xs">Email</Label>
-            <Input type="email" value={form.email} onChange={f("email")} placeholder="contact@broker.com" />
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label className="font-mono text-xs">Last Contact</Label>
-            <Input type="date" value={form.lastContact} onChange={f("lastContact")} />
-          </div>
-
-          {/* ── Coverage ── */}
-          <Section title="Coverage" />
-
-          <div className="col-span-2 flex flex-col gap-1">
-            <Label className="font-mono text-xs">Coverage Area</Label>
-            <Input value={form.coverage} onChange={f("coverage")} placeholder="Nationwide, Midwest, Southeast..." />
-          </div>
-          <div className="col-span-2 flex flex-col gap-1">
-            <Label className="font-mono text-xs">Freight Types <span className="text-muted-foreground">(comma-separated)</span></Label>
-            <Input value={freightTypes} onChange={(e) => setFreightTypes(e.target.value)} placeholder="Dry Van, Flatbed, Reefer..." />
-          </div>
-          <div className="col-span-2 flex flex-col gap-1">
-            <Label className="font-mono text-xs">Selected States <span className="text-muted-foreground">(comma-separated, e.g. TX, FL, CA)</span></Label>
-            <Input value={selectedStates} onChange={(e) => setSelectedStates(e.target.value)} placeholder="TX, FL, CA..." />
-          </div>
-
-          {/* ── Payment Terms ── */}
-          <Section title="Payment Terms" />
-
-          <div className="flex flex-col gap-1">
-            <Label className="font-mono text-xs">Payment Terms</Label>
-            <Select value={form.paymentTerms || "__none__"} onValueChange={sel("paymentTerms")}>
-              <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">None</SelectItem>
-                <SelectItem value="Net 15">Net 15</SelectItem>
-                <SelectItem value="Net 30">Net 30</SelectItem>
-                <SelectItem value="Net 45">Net 45</SelectItem>
-                <SelectItem value="Net 60">Net 60</SelectItem>
-                <SelectItem value="QuickPay">QuickPay</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label className="font-mono text-xs">Payment Days</Label>
-            <Input type="number" min="0" value={form.paymentDays} onChange={f("paymentDays")} placeholder="30" />
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label className="font-mono text-xs">QuickPay Fee (%)</Label>
-            <Input type="number" step="0.01" min="0" value={form.quickPayFee} onChange={f("quickPayFee")} placeholder="2.5" />
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label className="font-mono text-xs">Factoring Accepted</Label>
-            <Select value={form.factoringAccepted || "__none__"} onValueChange={sel("factoringAccepted")}>
-              <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">Unknown</SelectItem>
-                <SelectItem value="Yes">Yes</SelectItem>
-                <SelectItem value="No">No</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex items-center gap-2 mt-2">
-            <input
-              type="checkbox"
-              id="quickPayBroker"
-              checked={form.quickPay}
-              onChange={(e) => setForm((p) => ({ ...p, quickPay: e.target.checked }))}
-              className="h-4 w-4 rounded border-border"
-            />
-            <Label htmlFor="quickPayBroker" className="font-mono text-xs cursor-pointer">QuickPay Available</Label>
-          </div>
-
-          {/* ── Onboarding ── */}
-          <Section title="Onboarding" />
-
-          <div className="flex flex-col gap-1">
-            <Label className="font-mono text-xs">Onboarding Status</Label>
-            <Select value={form.onboardingStatus || "__none__"} onValueChange={sel("onboardingStatus")}>
-              <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">None</SelectItem>
-                <SelectItem value="Not Started">Not Started</SelectItem>
-                <SelectItem value="In Progress">In Progress</SelectItem>
-                <SelectItem value="Complete">Complete</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* ── Tags / Notes ── */}
-          <div className="col-span-2 flex flex-col gap-1">
-            <Label className="font-mono text-xs">Tags <span className="text-muted-foreground">(comma-separated)</span></Label>
-            <Input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="preferred, top-lane..." />
-          </div>
-
-          <div className="col-span-2 flex flex-col gap-1">
-            <Label className="font-mono text-xs">Notes</Label>
-            <Textarea value={form.notes} onChange={f("notes")} rows={3} />
-          </div>
-
-          <div className="col-span-2 flex justify-end gap-2 border-t border-border pt-4">
-            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-            <Button type="submit" disabled={isPending}>
-              {isPending ? "Saving..." : isEdit ? "Save Changes" : "Add Broker"}
+          <div className="flex flex-col-reverse gap-2 border-t border-border pt-4 sm:flex-row sm:justify-end">
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={!canSubmit}>
+              {isPending ? "Saving…" : initialData ? "Save Changes" : "Create Broker"}
             </Button>
           </div>
         </form>
