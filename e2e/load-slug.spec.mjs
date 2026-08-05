@@ -12,7 +12,7 @@ test("loads a deterministic operational Load with route, parties and vehicle", a
   ).toBeVisible();
 
   const summary = page.getByRole("region", { name: "Load summary" });
-  await expect(summary.getByText("420 mi", { exact: true })).toBeVisible();
+  await expect(summary.getByText("420.00 mi", { exact: true })).toBeVisible();
   await expect(summary.getByText("$1,250.00", { exact: true })).toBeVisible();
   await expect(summary.getByText("$1,050.00", { exact: true })).toBeVisible();
   await expect(summary.getByText("Paid", { exact: true })).toBeVisible();
