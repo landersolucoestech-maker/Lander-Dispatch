@@ -1,0 +1,91 @@
+import type { CrmLead } from "@workspace/api-client-react";
+import type {
+  EditablePipelineStage,
+  LeadSource,
+  LeadType,
+  Priority,
+} from "../config/leadTypes";
+
+export type LeadRecord = Omit<CrmLead, "freightTypes"> & {
+  leadType?: LeadType | null;
+  streetAddress?: string | null;
+  zipCode?: string | null;
+  brokerType?: string | null;
+  coverage?: string | null;
+  freightTypes?: string | null;
+  selectedStates?: string | null;
+  nextFollowUpDate?: string | null;
+  nextFollowUpTime?: string | null;
+  followUpNotes?: string | null;
+  updatedAt?: string | null;
+};
+
+export interface LeadMutationInput {
+  companyName: string;
+  leadType: LeadType;
+  pipelineStage: EditablePipelineStage;
+  leadSource?: LeadSource | null;
+  priority?: Priority | null;
+  rating?: number | null;
+  primaryContact?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  website?: string | null;
+  streetAddress?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zipCode?: string | null;
+  serviceTypes?: string[];
+  operatingStates?: string[];
+  estimatedWeeklyLoads?: number | null;
+  estimatedWeeklyRevenue?: number | null;
+  nextFollowUpDate?: string | null;
+  nextFollowUpTime?: string | null;
+  followUpNotes?: string | null;
+  tags?: string[];
+  notes?: string | null;
+  brokerType?: string | null;
+  mcNumber?: string | null;
+  usdotNumber?: string | null;
+  coverage?: string | null;
+  freightTypes?: string | null;
+  selectedStates?: string | null;
+}
+
+async function requestLead(
+  path: string,
+  method: "POST" | "PATCH",
+  data: LeadMutationInput,
+): Promise<LeadRecord> {
+  const response = await fetch(path, {
+    method,
+    credentials: "same-origin",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const errorBody = (await response.json().catch(() => null)) as
+      | { error?: string }
+      | null;
+    throw new Error(
+      errorBody?.error || `Lead request failed with status ${response.status}.`,
+    );
+  }
+
+  return response.json() as Promise<LeadRecord>;
+}
+
+export function createLead(data: LeadMutationInput): Promise<LeadRecord> {
+  return requestLead("/api/crm/leads", "POST", data);
+}
+
+export function updateLead(
+  leadId: string,
+  data: LeadMutationInput,
+): Promise<LeadRecord> {
+  return requestLead(`/api/crm/leads/${leadId}`, "PATCH", data);
+}
