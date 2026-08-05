@@ -14,9 +14,13 @@
     "infra:logs": "docker compose logs -f postgres minio",
     "db:push": "pnpm --filter @workspace/db push",
     "auth:bootstrap-owner": "pnpm --filter @workspace/scripts bootstrap-owner",
+    "seed:dev": "pnpm --filter @workspace/scripts seed-dev",
+    "seed:dev:verify": "pnpm --filter @workspace/scripts verify-seed-dev",
+    "seed:dev:guard": "pnpm --filter @workspace/scripts verify-seed-guard",
     "dev:web": "pnpm --filter @workspace/lander-dispatch dev",
     "dev:api": "pnpm --filter @workspace/api-server dev",
-    "local:setup": "pnpm infra:up && pnpm db:push"
+    "local:setup": "pnpm infra:up && pnpm db:push",
+    "local:setup:demo": "pnpm local:setup && pnpm seed:dev && pnpm seed:dev:verify"
   },
   "private": true,
   "devDependencies": {
