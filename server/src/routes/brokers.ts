@@ -9,6 +9,13 @@ import {
 
 const router: IRouter = Router();
 
+function serializeBroker<T extends typeof brokersTable.$inferSelect>(broker: T) {
+  return {
+    ...broker,
+    rating: broker.rating == null ? null : Number.parseFloat(broker.rating),
+  };
+}
+
 router.get("/brokers", async (req, res): Promise<void> => {
   const parsed = ListBrokersQueryParams.safeParse(req.query);
   const { search, status, page = 1, pageSize = 20 } = parsed.success ? parsed.data : { search: undefined, status: undefined, page: 1, pageSize: 20 };
@@ -41,7 +48,7 @@ router.get("/brokers", async (req, res): Promise<void> => {
       .where(eq(loadsTable.brokerId, b.id))
       .orderBy(desc(loadsTable.createdAt))
       .limit(1);
-    return { ...b, lastLoadDate: lastLoad?.date ?? null };
+    return serializeBroker({ ...b, lastLoadDate: lastLoad?.date ?? null });
   }));
 
   res.json({ data: enriched, meta: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) } });
@@ -51,7 +58,7 @@ router.post("/brokers", async (req, res): Promise<void> => {
   const parsed = CreateBrokerBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
   const [broker] = await db.insert(brokersTable).values(parsed.data as typeof brokersTable.$inferInsert).returning();
-  res.status(201).json({ ...broker, lastLoadDate: null });
+  res.status(201).json(serializeBroker({ ...broker, lastLoadDate: null }));
 });
 
 router.get("/brokers/:brokerId", async (req, res): Promise<void> => {
@@ -59,7 +66,7 @@ router.get("/brokers/:brokerId", async (req, res): Promise<void> => {
   const [broker] = await db.select().from(brokersTable).where(eq(brokersTable.id, brokerId));
   if (!broker) { res.status(404).json({ error: "Not found" }); return; }
   const [lastLoad] = await db.select({ date: loadsTable.dispatchDate }).from(loadsTable).where(eq(loadsTable.brokerId, brokerId)).orderBy(desc(loadsTable.createdAt)).limit(1);
-  res.json({ ...broker, lastLoadDate: lastLoad?.date ?? null });
+  res.json(serializeBroker({ ...broker, lastLoadDate: lastLoad?.date ?? null }));
 });
 
 router.patch("/brokers/:brokerId", async (req, res): Promise<void> => {
@@ -69,7 +76,7 @@ router.patch("/brokers/:brokerId", async (req, res): Promise<void> => {
   const [broker] = await db.update(brokersTable).set({ ...parsed.data, updatedAt: new Date() } as Partial<typeof brokersTable.$inferInsert>).where(eq(brokersTable.id, brokerId)).returning();
   if (!broker) { res.status(404).json({ error: "Not found" }); return; }
   const [lastLoad] = await db.select({ date: loadsTable.dispatchDate }).from(loadsTable).where(eq(loadsTable.brokerId, brokerId)).orderBy(desc(loadsTable.createdAt)).limit(1);
-  res.json({ ...broker, lastLoadDate: lastLoad?.date ?? null });
+  res.json(serializeBroker({ ...broker, lastLoadDate: lastLoad?.date ?? null }));
 });
 
 router.delete("/brokers/:brokerId", async (req, res): Promise<void> => {
