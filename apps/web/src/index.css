@@ -51,7 +51,6 @@
 }
 
 :root {
-  /* LANDER DISPATCH — official identity extracted from supplied brand board */
   --background: 0 0% 100%;
   --foreground: 217 45% 13%;
   --card: 0 0% 100%;
@@ -60,16 +59,11 @@
   --popover: 0 0% 100%;
   --popover-foreground: 217 45% 13%;
   --popover-border: 0 0% 85%;
-
-  /* #1E3D7A */
   --primary: 219 61% 30%;
   --primary-foreground: 0 0% 100%;
-  /* #0B1E36 */
   --secondary: 216 66% 13%;
   --secondary-foreground: 0 0% 100%;
-  /* #D9D9D9 */
   --muted: 0 0% 85%;
-  /* #4B5563 */
   --muted-foreground: 215 16% 34%;
   --accent: 219 61% 95%;
   --accent-foreground: 219 61% 30%;
@@ -78,7 +72,6 @@
   --border: 0 0% 85%;
   --input: 0 0% 85%;
   --ring: 219 61% 30%;
-
   --sidebar: 0 0% 100%;
   --sidebar-foreground: 216 66% 13%;
   --sidebar-border: 0 0% 85%;
@@ -87,14 +80,11 @@
   --sidebar-accent: 219 61% 95%;
   --sidebar-accent-foreground: 219 61% 30%;
   --sidebar-ring: 219 61% 30%;
-
   --chart-1: 219 61% 30%;
   --chart-2: 216 66% 13%;
   --chart-3: 215 16% 34%;
   --chart-4: 0 0% 85%;
   --chart-5: 219 58% 46%;
-
-  /* No legacy project fonts. Korolev is the brand typeface. */
   --app-font-sans: 'Korolev', 'Arial Narrow', Arial, sans-serif;
   --radius: 0.55rem;
 }
@@ -124,12 +114,24 @@
   body {
     @apply antialiased bg-background text-foreground;
     min-width: 320px;
+    font-weight: 400;
   }
 
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--app-font-sans) !important;
-    font-weight: 700;
-    letter-spacing: -0.015em;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  p,
+  span,
+  label,
+  td,
+  th,
+  input,
+  textarea,
+  select {
+    font-weight: 400;
   }
 
   code, pre, kbd, samp {
@@ -138,6 +140,26 @@
 
   ::selection {
     background: rgba(30, 61, 122, 0.18);
+  }
+}
+
+@layer utilities {
+  .text-xs.font-bold,
+  .text-xs.font-semibold {
+    font-weight: 500 !important;
+  }
+
+  .text-xs.font-medium,
+  [class*="text-[10px]"][class*="font-bold"],
+  [class*="text-[10px]"][class*="font-semibold"],
+  [class*="text-[11px]"][class*="font-bold"],
+  [class*="text-[11px]"][class*="font-semibold"] {
+    font-weight: 400 !important;
+  }
+
+  .text-sm.font-bold,
+  .text-sm.font-semibold {
+    font-weight: 500 !important;
   }
 }
 
