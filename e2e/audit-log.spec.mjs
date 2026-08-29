@@ -18,11 +18,12 @@ test.describe("Audit log", () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/audit-log");
 
+    const header = page.getByRole("banner");
     await expect(
-      page.getByRole("heading", { name: "AUDIT LOG", level: 1 }),
+      header.getByRole("heading", { name: "AUDIT LOG", level: 1 }),
     ).toBeVisible();
     await expect(
-      page.getByText(
+      header.getByText(
         "Read-only operational history for security, accountability and troubleshooting.",
         { exact: true },
       ),
