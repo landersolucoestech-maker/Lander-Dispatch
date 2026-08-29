@@ -17,6 +17,7 @@ import {
   Plus,
   Settings,
   Truck,
+  Upload,
   UserPlus,
   Users,
   X,
@@ -229,6 +230,42 @@ function HeaderActions({ location, crmTab }: { location: string; crmTab: CrmTab 
       <button type="button" className={primaryClass} onClick={() => dispatch("lander:carriers-add")}>
         <Plus className="h-4 w-4" />
         Add Carrier
+      </button>
+    );
+  }
+
+  if (location === "/brokers") {
+    return (
+      <button type="button" className={primaryClass} onClick={() => dispatch("lander:brokers-add")}>
+        <Plus className="h-4 w-4" />
+        Add Broker
+      </button>
+    );
+  }
+
+  if (location === "/documents") {
+    return (
+      <button type="button" className={primaryClass} onClick={() => dispatch("lander:documents-upload")}>
+        <Upload className="h-4 w-4" />
+        Upload Document
+      </button>
+    );
+  }
+
+  if (location === "/accounting/invoices") {
+    return (
+      <button type="button" className={primaryClass} onClick={() => dispatch("lander:invoices-create")}>
+        <Plus className="h-4 w-4" />
+        Create Invoice
+      </button>
+    );
+  }
+
+  if (location === "/accounting/transactions") {
+    return (
+      <button type="button" className={primaryClass} onClick={() => dispatch("lander:transactions-add")}>
+        <Plus className="h-4 w-4" />
+        Add Transaction
       </button>
     );
   }
