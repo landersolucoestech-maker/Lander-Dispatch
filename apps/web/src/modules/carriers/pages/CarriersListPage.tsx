@@ -6,7 +6,7 @@ import { Input } from "@/shared/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
 import { StatusBadge } from "@/shared/components/ui/status-badge";
-import { formatDate } from "@/shared/lib/utils";
+import { formatDate, formatDecimal } from "@/shared/lib/utils";
 import { Search } from "lucide-react";
 import { CarrierFormModal } from "../components/CarrierFormModal";
 import { CarrierViewModal } from "../components/CarrierViewModal";
@@ -88,49 +88,52 @@ export default function CarriersListPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.data.map((carrier) => (
-              <TableRow key={carrier.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setViewCarrier(carrier)}>
-                <TableCell className="font-medium">{carrier.companyName}</TableCell>
-                <TableCell className="font-mono text-xs text-muted-foreground">
-                  <div className="flex flex-col">
-                    <span>MC: {carrier.mcNumber || "--"}</span>
-                    <span>DOT: {carrier.usdotNumber || "--"}</span>
-                  </div>
-                </TableCell>
-                <TableCell className="font-mono text-xs">
-                  <div className="flex flex-col">
-                    <span className="text-foreground">{carrier.primaryContact || "--"}</span>
-                    <span className="text-muted-foreground">{carrier.phone || "--"}</span>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-1 font-mono text-xs">
-                    {carrier.rating ? (
-                      <>
-                        <span className="text-primary">{carrier.rating.toFixed(1)}</span>
-                        <span className="text-muted-foreground">/5.0</span>
-                      </>
-                    ) : "--"}
-                  </div>
-                </TableCell>
-                <TableCell className="font-mono text-xs text-muted-foreground">
-                  {formatDate(carrier.lastLoadDate)}
-                </TableCell>
-                <TableCell>
-                  <StatusBadge status={carrier.status} />
-                </TableCell>
-                <TableCell>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="font-mono text-[10px]"
-                    onClick={(e) => { e.stopPropagation(); setViewCarrier(carrier); }}
-                  >
-                    VIEW
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
+            {data.data.map((carrier) => {
+              const rating = formatDecimal(carrier.rating, 1);
+              return (
+                <TableRow key={carrier.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setViewCarrier(carrier)}>
+                  <TableCell className="font-medium">{carrier.companyName}</TableCell>
+                  <TableCell className="font-mono text-xs text-muted-foreground">
+                    <div className="flex flex-col">
+                      <span>MC: {carrier.mcNumber || "--"}</span>
+                      <span>DOT: {carrier.usdotNumber || "--"}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="font-mono text-xs">
+                    <div className="flex flex-col">
+                      <span className="text-foreground">{carrier.primaryContact || "--"}</span>
+                      <span className="text-muted-foreground">{carrier.phone || "--"}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1 font-mono text-xs">
+                      {rating ? (
+                        <>
+                          <span className="text-primary">{rating}</span>
+                          <span className="text-muted-foreground">/5.0</span>
+                        </>
+                      ) : "--"}
+                    </div>
+                  </TableCell>
+                  <TableCell className="font-mono text-xs text-muted-foreground">
+                    {formatDate(carrier.lastLoadDate)}
+                  </TableCell>
+                  <TableCell>
+                    <StatusBadge status={carrier.status} />
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="font-mono text-[10px]"
+                      onClick={(e) => { e.stopPropagation(); setViewCarrier(carrier); }}
+                    >
+                      VIEW
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       )}
