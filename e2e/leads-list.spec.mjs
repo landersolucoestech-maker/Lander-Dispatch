@@ -4,29 +4,30 @@ test("renders the CRM Leads demand pipeline and non-destructive filters", async 
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("/crm/leads");
+  await page.goto("/crm");
+
+  await page.getByRole("button", { name: /Leads/ }).click();
 
   await expect(
-    page.getByRole("heading", { name: "Leads", level: 1 }),
+    page.getByRole("heading", { name: "CRM", level: 1 }),
   ).toBeVisible();
-  await expect(page.getByText("CRM Pipeline", { exact: true })).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Add Lead" }),
+    page.getByRole("button", { name: "Create Lead" }),
   ).toBeEnabled();
+  await expect(
+    page.getByRole("button", { name: "Create Contact" }),
+  ).toHaveCount(0);
 
   const table = page.getByRole("table");
   await expect(table).toBeVisible();
+  await expect(table.getByRole("columnheader", { name: "Company" })).toBeVisible();
+  await expect(table.getByRole("columnheader", { name: "Lead Type" })).toBeVisible();
+  await expect(table.getByRole("columnheader", { name: "Contact" })).toBeVisible();
   await expect(
-    table.getByRole("columnheader", { name: "Company" }),
+    table.getByRole("columnheader", { name: "Pipeline Stage" }),
   ).toBeVisible();
   await expect(
-    table.getByRole("columnheader", { name: "Contact" }),
-  ).toBeVisible();
-  await expect(
-    table.getByRole("columnheader", { name: "Stage" }),
-  ).toBeVisible();
-  await expect(
-    table.getByRole("columnheader", { name: "Est. Weekly Rev" }),
+    table.getByRole("columnheader", { name: "Est. Weekly Revenue" }),
   ).toBeVisible();
   await expect(
     table.getByRole("columnheader", { name: "Next Follow-Up" }),
@@ -39,19 +40,17 @@ test("renders the CRM Leads demand pipeline and non-destructive filters", async 
 
   const stageFilter = page.getByRole("combobox");
   await stageFilter.click();
-  await page.getByRole("option", { name: "QUALIFIED" }).click();
-  await expect(stageFilter).toContainText("QUALIFIED");
+  await page.getByRole("option", { name: "Qualified" }).click();
+  await expect(stageFilter).toContainText("Qualified");
   await expect(
     table.getByText("Granite Motors Network", { exact: true }),
   ).toBeVisible();
 
-  const search = page.getByPlaceholder("Search Company, Contact...");
+  const search = page.getByPlaceholder("Search company or contact");
   await search.fill("__no_matching_lead__");
-  await expect(
-    page.getByText("NO.RECORDS.FOUND", { exact: true }),
-  ).toBeVisible();
+  await expect(page.getByText("No leads found.", { exact: true })).toBeVisible();
 
-  await page.getByRole("button", { name: "CLEAR.FILTERS" }).click();
+  await search.fill("");
   await expect(table).toBeVisible();
   await expect(
     table.getByText("Granite Motors Network", { exact: true }),
