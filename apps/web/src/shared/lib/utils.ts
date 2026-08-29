@@ -5,12 +5,27 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function formatCurrency(amount: number | null | undefined) {
-  if (amount == null) return "$0.00";
+export function toFiniteNumber(value: number | string | null | undefined) {
+  if (value == null || value === "") return null;
+  const numericValue = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(numericValue) ? numericValue : null;
+}
+
+export function formatDecimal(
+  value: number | string | null | undefined,
+  fractionDigits = 1,
+) {
+  const numericValue = toFiniteNumber(value);
+  return numericValue == null ? null : numericValue.toFixed(fractionDigits);
+}
+
+export function formatCurrency(amount: number | string | null | undefined) {
+  const numericAmount = toFiniteNumber(amount);
+  if (numericAmount == null) return "$0.00";
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
-  }).format(amount);
+  }).format(numericAmount);
 }
 
 export function formatDate(date: string | null | undefined) {
