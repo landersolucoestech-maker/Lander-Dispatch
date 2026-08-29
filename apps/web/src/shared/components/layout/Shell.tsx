@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@workspace/auth-web";
 import {
@@ -29,6 +29,8 @@ interface NavigationItem {
   icon: typeof LayoutDashboard;
   sub?: Array<{ href: string; label: string }>;
 }
+
+type CrmTab = "contacts" | "leads";
 
 const NAV_ITEMS: NavigationItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -184,7 +186,7 @@ function SidebarContent({ location, onNavigate }: { location: string; onNavigate
   );
 }
 
-function HeaderActions({ location }: { location: string }) {
+function HeaderActions({ location, crmTab }: { location: string; crmTab: CrmTab }) {
   const dispatch = (name: string) => window.dispatchEvent(new CustomEvent(name));
   const secondaryClass = "hidden h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-[#1E3D7A] sm:flex";
   const primaryClass = "hidden h-10 items-center gap-2 rounded-lg bg-[#1E3D7A] px-3 text-sm font-semibold text-white transition-colors hover:bg-[#173462] sm:flex";
@@ -205,17 +207,20 @@ function HeaderActions({ location }: { location: string }) {
   }
 
   if (location === "/crm") {
-    return (
-      <div className="flex items-center gap-2">
-        <button type="button" className={secondaryClass} onClick={() => dispatch("lander:crm-create-contact")}>
-          <UserPlus className="h-4 w-4" />
-          Create Contact
-        </button>
+    if (crmTab === "leads") {
+      return (
         <button type="button" className={primaryClass} onClick={() => dispatch("lander:crm-create-lead")}>
           <Plus className="h-4 w-4" />
           Create Lead
         </button>
-      </div>
+      );
+    }
+
+    return (
+      <button type="button" className={primaryClass} onClick={() => dispatch("lander:crm-create-contact")}>
+        <UserPlus className="h-4 w-4" />
+        Create Contact
+      </button>
     );
   }
 
@@ -236,10 +241,31 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [crmTab, setCrmTab] = useState<CrmTab>("contacts");
   const { user, logout } = useAuth();
   const pageLabel = useMemo(() => getPageLabel(location), [location]);
   const initials = `${user?.firstName?.[0] ?? ""}${user?.lastName?.[0] ?? ""}` || "OP";
   const displayName = [user?.firstName, user?.lastName].filter(Boolean).join(" ") || "Operator";
+
+  useEffect(() => {
+    if (location !== "/crm") {
+      setCrmTab("contacts");
+      return;
+    }
+
+    const handleCrmTabClick = (event: MouseEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const button = target.closest("button");
+      if (!button) return;
+      const label = button.textContent?.trim();
+      if (label?.startsWith("Contacts")) setCrmTab("contacts");
+      if (label?.startsWith("Leads")) setCrmTab("leads");
+    };
+
+    document.addEventListener("click", handleCrmTabClick, true);
+    return () => document.removeEventListener("click", handleCrmTabClick, true);
+  }, [location]);
 
   return (
     <div className="lander-page-bg flex min-h-[100dvh] w-full text-foreground">
@@ -271,7 +297,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="relative flex shrink-0 items-center gap-2">
-            <HeaderActions location={location} />
+            <HeaderActions location={location} crmTab={crmTab} />
 
             <div className="relative">
               <button
