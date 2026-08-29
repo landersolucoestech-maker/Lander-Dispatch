@@ -12,7 +12,7 @@ async function expectNoHorizontalOverflow(page) {
 }
 
 test.describe("Shell and dashboard", () => {
-  test("renders the operational dashboard and supports quick module navigation", async ({
+  test("renders the operational dashboard and supports module navigation", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
@@ -43,11 +43,7 @@ test.describe("Shell and dashboard", () => {
       kpis.getByRole("heading", { name: "Monthly Revenue", exact: true }),
     ).toBeVisible();
 
-    const quickNavigation = page.getByRole("textbox", {
-      name: "Quick module navigation",
-    });
-    await quickNavigation.fill("Documents");
-    await quickNavigation.press("Enter");
+    await page.getByRole("complementary").getByRole("link", { name: "Documents" }).click();
 
     await expect(page).toHaveURL(/\/documents$/);
     await expect(
