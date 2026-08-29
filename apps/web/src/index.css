@@ -210,6 +210,28 @@
     font-weight: 600 !important;
   }
 
+  main[data-module="dashboard"] > main > header,
+  main[data-module="loads"] > div > header,
+  main[data-module="crm"] > div > header,
+  main[data-module="documents"] > div > header,
+  main[data-module="invoices"] > div > header,
+  main[data-module="transactions"] > div > header,
+  main[data-module="audit-log"] > div > header,
+  main[data-module="carriers"] > div > div:first-child,
+  main[data-module="brokers"] > div > div:first-child {
+    display: none;
+  }
+
+  main[data-module="profit-loss"] > div > header > div:first-child,
+  main[data-module="reports"] > div > header > div:first-child {
+    display: none;
+  }
+
+  main[data-module="profit-loss"] > div > header,
+  main[data-module="reports"] > div > header {
+    justify-content: flex-end;
+  }
+
   .lander-surface {
     @apply rounded-xl border border-border bg-white shadow-sm;
     box-shadow: 0 1px 2px rgba(11, 30, 54, 0.04), 0 8px 24px rgba(11, 30, 54, 0.035);
