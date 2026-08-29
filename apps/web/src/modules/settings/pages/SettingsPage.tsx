@@ -1,362 +1,102 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  useGetCompanyProfile,
-  useUpdateCompanyProfile,
-} from "@workspace/api-client-react";
+import { useGetCompanyProfile, useUpdateCompanyProfile } from "@workspace/api-client-react";
 import type { CompanyProfile } from "@workspace/api-client-react";
+import { AlertTriangle, BellRing, Building2, CheckCircle2, CreditCard, Globe2, KeyRound, Link2, LockKeyhole, Plus, Save, Shield, Trash2, UserCog, Users, Webhook } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
-import {
-  AlertTriangle,
-  Building2,
-  CheckCircle2,
-  MapPin,
-  Phone,
-  Save,
-  Shield,
-} from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
+import { Textarea } from "@/shared/components/ui/textarea";
 
 type FormState = {
-  companyName: string;
-  legalCompanyName: string;
-  dbaName: string;
-  einNumber: string;
-  mcNumber: string;
-  usdotNumber: string;
-  companyPhone: string;
-  companyEmail: string;
-  website: string;
-  streetAddress: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  country: string;
-  businessHours: string;
+  companyName:string; legalCompanyName:string; dbaName:string; einNumber:string; mcNumber:string; usdotNumber:string;
+  companyPhone:string; companyEmail:string; website:string; streetAddress:string; city:string; state:string; zipCode:string; country:string; businessHours:string;
 };
+const EMPTY_FORM: FormState = { companyName:"",legalCompanyName:"",dbaName:"",einNumber:"",mcNumber:"",usdotNumber:"",companyPhone:"",companyEmail:"",website:"",streetAddress:"",city:"",state:"",zipCode:"",country:"",businessHours:"" };
+function profileToForm(profile?: CompanyProfile): FormState { if(!profile) return EMPTY_FORM; return { companyName:profile.companyName??"",legalCompanyName:profile.legalCompanyName??"",dbaName:profile.dbaName??"",einNumber:profile.einNumber??"",mcNumber:profile.mcNumber??"",usdotNumber:profile.usdotNumber??"",companyPhone:profile.companyPhone??"",companyEmail:profile.companyEmail??"",website:profile.website??"",streetAddress:profile.streetAddress??"",city:profile.city??"",state:profile.state??"",zipCode:profile.zipCode??"",country:profile.country??"",businessHours:profile.businessHours??"" }; }
 
-const EMPTY_FORM: FormState = {
-  companyName: "",
-  legalCompanyName: "",
-  dbaName: "",
-  einNumber: "",
-  mcNumber: "",
-  usdotNumber: "",
-  companyPhone: "",
-  companyEmail: "",
-  website: "",
-  streetAddress: "",
-  city: "",
-  state: "",
-  zipCode: "",
-  country: "",
-  businessHours: "",
-};
+type Integration = { id:string; name:string; category:string; status:"Connected"|"Disconnected"|"Planned"; description:string };
+type UserRow = { id:string; name:string; email:string; role:string; status:string };
+type RoleRow = { id:string; name:string; description:string; permissions:string[] };
+const INITIAL_INTEGRATIONS: Integration[] = [
+  {id:"meta",name:"Meta (Facebook + Instagram)",category:"Marketing & messaging",status:"Disconnected",description:"Messages, account information, content, moderation, campaigns and supported Meta analytics."},
+  {id:"whatsapp",name:"WhatsApp",category:"Messaging",status:"Disconnected",description:"Centralized customer conversations and support."},
+  {id:"resend",name:"Resend",category:"Email",status:"Disconnected",description:"Transactional and operational email delivery."},
+  {id:"youtube",name:"YouTube",category:"Content & media",status:"Disconnected",description:"Publishing, content management and supported campaign metrics."},
+  {id:"tiktok",name:"TikTok",category:"Content & media",status:"Disconnected",description:"Publishing, messages where supported, ads and analytics."},
+  {id:"google-ads",name:"Google Ads",category:"Advertising",status:"Disconnected",description:"Campaign creation, management and reporting."},
+  {id:"nfse",name:"NFS-e / Invoice Service",category:"Accounting",status:"Planned",description:"Service invoice issuance, consultation and management."},
+  {id:"esign",name:"Electronic Signature",category:"Documents",status:"Planned",description:"Contract generation, sending, tracking and electronic signatures."},
+];
 
-function Section({
-  icon: Icon,
-  title,
-  description,
-  children,
-}: {
-  icon: typeof Building2;
-  title: string;
-  description?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="space-y-4 border border-border bg-card p-4 sm:p-5">
-      <div className="flex items-start gap-3 border-b border-border pb-3">
-        <Icon className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-        <div>
-          <h2 className="text-sm font-semibold uppercase tracking-wide">{title}</h2>
-          {description ? (
-            <p className="mt-1 text-xs text-muted-foreground">{description}</p>
-          ) : null}
+function Section({title,description,children}:{title:string;description?:string;children:React.ReactNode}){return <section className="rounded-xl border border-slate-200 bg-white p-5"><div className="mb-4 border-b border-slate-200 pb-3"><h2 className="text-sm font-semibold text-[#0B1E36]">{title}</h2>{description&&<p className="mt-1 text-xs text-slate-500">{description}</p>}</div>{children}</section>}
+function Field({label,children,className=""}:{label:string;children:React.ReactNode;className?:string}){return <div className={`flex flex-col gap-1.5 ${className}`}><Label className="text-xs">{label}</Label>{children}</div>}
+function Toggle({checked,onChange,label,description}:{checked:boolean;onChange:(next:boolean)=>void;label:string;description?:string}){return <label className="flex cursor-pointer items-start justify-between gap-4 rounded-lg border border-slate-200 p-3"><div><p className="text-sm font-medium">{label}</p>{description&&<p className="mt-1 text-xs text-slate-500">{description}</p>}</div><input type="checkbox" checked={checked} onChange={(e)=>onChange(e.target.checked)} className="mt-1 h-4 w-4"/></label>}
+
+export default function SettingsPage(){
+  const queryClient=useQueryClient();
+  const profileQuery=useGetCompanyProfile();
+  const updateMutation=useUpdateCompanyProfile();
+  const [form,setForm]=useState<FormState>(EMPTY_FORM);
+  const [saved,setSaved]=useState(false);
+  const [tab,setTab]=useState("company");
+  const [automations,setAutomations]=useState({dailyDigest:true,overdueInvoices:true,loadFollowups:true,carrierCompliance:true,quietHours:false});
+  const [digestFrequency,setDigestFrequency]=useState("Daily");
+  const [digestTime,setDigestTime]=useState("08:00");
+  const [passwordForm,setPasswordForm]=useState({current:"",next:"",confirm:""});
+  const [integrations,setIntegrations]=useState<Integration[]>(INITIAL_INTEGRATIONS);
+  const [publicRegistration,setPublicRegistration]=useState({enabled:false,slug:"",webhook:"",pixel:""});
+  const [users,setUsers]=useState<UserRow[]>([]);
+  const [roles,setRoles]=useState<RoleRow[]>([{id:"owner",name:"Owner",description:"Full administrative access.",permissions:["all"]},{id:"dispatcher",name:"Dispatcher",description:"Loads, CRM and carrier operations.",permissions:["loads","crm","carriers"]}]);
+  const [inviteOpen,setInviteOpen]=useState(false);
+  const [invite,setInvite]=useState({name:"",email:"",role:"Dispatcher"});
+  const [roleOpen,setRoleOpen]=useState(false);
+  const [roleForm,setRoleForm]=useState({name:"",description:"",permissions:"loads, crm"});
+
+  useEffect(()=>setForm(profileToForm(profileQuery.data)),[profileQuery.data]);
+  const persistedForm=useMemo(()=>profileToForm(profileQuery.data),[profileQuery.data]);
+  const hasChanges=JSON.stringify(form)!==JSON.stringify(persistedForm);
+  const emailIsValid=!form.companyEmail||/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.companyEmail);
+  const canSave=Boolean(form.companyName.trim())&&emailIsValid&&hasChanges&&!updateMutation.isPending;
+  const updateForm=(field:keyof FormState,value:string)=>{setSaved(false);setForm((previous)=>({...previous,[field]:value}))};
+  const handleSave=()=>{if(!canSave)return;const payload=Object.fromEntries(Object.entries(form).map(([key,value])=>[key,value.trim()||undefined]));updateMutation.mutate({data:payload},{onSuccess:async()=>{await queryClient.invalidateQueries({queryKey:["companyProfile"]});setSaved(true)}})};
+
+  if(profileQuery.isLoading)return <div className="flex flex-1 items-center justify-center p-8 text-sm text-slate-500">Loading configuration…</div>;
+  if(profileQuery.isError)return <div className="flex flex-1 items-center justify-center p-8"><div className="max-w-md rounded-xl border border-red-200 bg-white p-6 text-center"><AlertTriangle className="mx-auto h-6 w-6 text-red-600"/><p className="mt-3 font-semibold">Company configuration could not be loaded.</p><Button className="mt-4" variant="outline" onClick={()=>void profileQuery.refetch()}>Retry</Button></div></div>;
+
+  return <div className="flex flex-1 flex-col overflow-y-auto p-4 sm:p-6 lg:p-8">
+    <Tabs value={tab} onValueChange={setTab}>
+      <TabsList className="mb-5 flex h-auto w-full flex-wrap justify-start gap-1 rounded-xl border border-slate-200 bg-white p-1.5">
+        {[['company','Company'],['automations','Automations'],['security','Security'],['integrations','Integrations'],['public','Public Registration'],['billing','Billing'],['users','Users']].map(([value,label])=><TabsTrigger key={value} value={value} className="data-[state=active]:bg-[#edf3ff] data-[state=active]:text-[#1E3D7A]">{label}</TabsTrigger>)}
+      </TabsList>
+
+      <TabsContent value="company" className="mt-0 space-y-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">{saved?<span className="flex items-center gap-2 text-sm font-medium text-emerald-600"><CheckCircle2 className="h-4 w-4"/>Changes saved</span>:hasChanges?<span className="text-sm text-amber-600">Unsaved changes</span>:null}<Button className="gap-2" onClick={handleSave} disabled={!canSave}><Save className="h-4 w-4"/>{updateMutation.isPending?"Saving…":"Save Settings"}</Button></div>
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+          <Section title="Company Identity" description="Public and legal information used throughout Lander Dispatch."><div className="grid grid-cols-1 gap-4 md:grid-cols-2"><Field label="Company Name *" className="md:col-span-2"><Input value={form.companyName} onChange={(e)=>updateForm("companyName",e.target.value)}/></Field><Field label="Legal Company Name"><Input value={form.legalCompanyName} onChange={(e)=>updateForm("legalCompanyName",e.target.value)}/></Field><Field label="DBA Name"><Input value={form.dbaName} onChange={(e)=>updateForm("dbaName",e.target.value)}/></Field><Field label="Website"><Input value={form.website} onChange={(e)=>updateForm("website",e.target.value)}/></Field><Field label="Business Hours"><Input value={form.businessHours} onChange={(e)=>updateForm("businessHours",e.target.value)}/></Field></div></Section>
+          <Section title="Regulatory Identifiers" description="Identifiers used on operational and financial documents."><div className="grid gap-4 md:grid-cols-3"><Field label="EIN"><Input value={form.einNumber} onChange={(e)=>updateForm("einNumber",e.target.value)}/></Field><Field label="MC Number"><Input value={form.mcNumber} onChange={(e)=>updateForm("mcNumber",e.target.value)}/></Field><Field label="USDOT"><Input value={form.usdotNumber} onChange={(e)=>updateForm("usdotNumber",e.target.value)}/></Field></div></Section>
+          <Section title="Contact Information"><div className="grid gap-4 md:grid-cols-2"><Field label="Phone / WhatsApp"><Input value={form.companyPhone} onChange={(e)=>updateForm("companyPhone",e.target.value)}/></Field><Field label="Email"><Input type="email" value={form.companyEmail} aria-invalid={!emailIsValid} onChange={(e)=>updateForm("companyEmail",e.target.value)}/>{!emailIsValid&&<p className="text-xs text-red-600">Enter a valid email address.</p>}</Field></div></Section>
+          <Section title="Company Address"><div className="grid gap-4 md:grid-cols-2"><Field label="Street Address" className="md:col-span-2"><Input value={form.streetAddress} onChange={(e)=>updateForm("streetAddress",e.target.value)}/></Field><Field label="City"><Input value={form.city} onChange={(e)=>updateForm("city",e.target.value)}/></Field><Field label="State"><Input value={form.state} onChange={(e)=>updateForm("state",e.target.value)}/></Field><Field label="ZIP"><Input value={form.zipCode} onChange={(e)=>updateForm("zipCode",e.target.value)}/></Field><Field label="Country"><Input value={form.country} onChange={(e)=>updateForm("country",e.target.value)}/></Field></div></Section>
         </div>
-      </div>
-      {children}
-    </section>
-  );
-}
+      </TabsContent>
 
-function Field({
-  label,
-  children,
-  className = "",
-}: {
-  label: string;
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <div className={`flex flex-col gap-1.5 ${className}`}>
-      <Label className="text-xs">{label}</Label>
-      {children}
-    </div>
-  );
-}
+      <TabsContent value="automations" className="mt-0 space-y-5"><Section title="Operational Automations" description="Configure recurring operational alerts and summaries."><div className="grid gap-3 md:grid-cols-2"><Toggle checked={automations.dailyDigest} onChange={(v)=>setAutomations({...automations,dailyDigest:v})} label="Daily Operations Digest" description="Summary of loads, agenda, tasks and financial alerts."/><Toggle checked={automations.overdueInvoices} onChange={(v)=>setAutomations({...automations,overdueInvoices:v})} label="Overdue Invoice Alerts" description="Surface overdue receivables to the finance queue."/><Toggle checked={automations.loadFollowups} onChange={(v)=>setAutomations({...automations,loadFollowups:v})} label="Load Follow-up Reminders" description="Prompt follow-up for pickup, delivery and exceptions."/><Toggle checked={automations.carrierCompliance} onChange={(v)=>setAutomations({...automations,carrierCompliance:v})} label="Carrier Compliance Alerts" description="Track authority and insurance review dates."/><Toggle checked={automations.quietHours} onChange={(v)=>setAutomations({...automations,quietHours:v})} label="Quiet Hours" description="Suppress non-critical automation notifications overnight."/></div><div className="mt-5 grid gap-4 sm:grid-cols-2"><Field label="Delivery Frequency"><Select value={digestFrequency} onValueChange={setDigestFrequency}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{['Daily','Weekdays','Weekly'].map((x)=><SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent></Select></Field><Field label="Preferred Time"><Input type="time" value={digestTime} onChange={(e)=>setDigestTime(e.target.value)}/></Field></div></Section></TabsContent>
 
-function profileToForm(profile?: CompanyProfile): FormState {
-  if (!profile) return EMPTY_FORM;
+      <TabsContent value="security" className="mt-0 space-y-5"><Section title="Password" description="Change the password associated with the active account."><div className="grid gap-4 md:grid-cols-3"><Field label="Current Password"><Input type="password" value={passwordForm.current} onChange={(e)=>setPasswordForm({...passwordForm,current:e.target.value})}/></Field><Field label="New Password"><Input type="password" value={passwordForm.next} onChange={(e)=>setPasswordForm({...passwordForm,next:e.target.value})}/></Field><Field label="Confirm New Password"><Input type="password" value={passwordForm.confirm} onChange={(e)=>setPasswordForm({...passwordForm,confirm:e.target.value})}/></Field></div><Button className="mt-4" variant="outline" disabled={!passwordForm.current||!passwordForm.next||passwordForm.next!==passwordForm.confirm}><KeyRound className="mr-2 h-4 w-4"/>Change Password</Button></Section><Section title="Sessions & Access"><div className="grid gap-3 md:grid-cols-2"><div className="rounded-lg border border-slate-200 p-4"><div className="flex items-center gap-2"><Shield className="h-4 w-4 text-[#1E3D7A]"/><p className="font-medium">Current Session</p></div><p className="mt-2 text-sm text-slate-500">This browser is currently authenticated.</p></div><div className="rounded-lg border border-slate-200 p-4"><div className="flex items-center gap-2"><LockKeyhole className="h-4 w-4 text-[#1E3D7A]"/><p className="font-medium">Other Sessions</p></div><p className="mt-2 text-sm text-slate-500">Revoke access on other devices when supported by the authentication provider.</p><Button className="mt-3" size="sm" variant="outline">End All Other Sessions</Button></div></div></Section></TabsContent>
 
-  return {
-    companyName: profile.companyName ?? "",
-    legalCompanyName: profile.legalCompanyName ?? "",
-    dbaName: profile.dbaName ?? "",
-    einNumber: profile.einNumber ?? "",
-    mcNumber: profile.mcNumber ?? "",
-    usdotNumber: profile.usdotNumber ?? "",
-    companyPhone: profile.companyPhone ?? "",
-    companyEmail: profile.companyEmail ?? "",
-    website: profile.website ?? "",
-    streetAddress: profile.streetAddress ?? "",
-    city: profile.city ?? "",
-    state: profile.state ?? "",
-    zipCode: profile.zipCode ?? "",
-    country: profile.country ?? "",
-    businessHours: profile.businessHours ?? "",
-  };
-}
+      <TabsContent value="integrations" className="mt-0 space-y-5"><Section title="Integrations" description="Official external services used by messaging, content, advertising, accounting and documents."><div className="grid gap-3 xl:grid-cols-2">{integrations.map((item)=><div key={item.id} className="rounded-lg border border-slate-200 p-4"><div className="flex items-start justify-between gap-3"><div><p className="font-semibold">{item.name}</p><p className="mt-0.5 text-[11px] uppercase tracking-wide text-slate-400">{item.category}</p></div><span className={`rounded-full border px-2 py-1 text-[10px] font-semibold ${item.status==='Connected'?'border-emerald-200 bg-emerald-50 text-emerald-700':item.status==='Planned'?'border-amber-200 bg-amber-50 text-amber-700':'border-slate-200 bg-slate-50 text-slate-500'}`}>{item.status}</span></div><p className="mt-3 text-sm leading-5 text-slate-500">{item.description}</p><div className="mt-4 flex gap-2">{item.status==='Planned'?<Button size="sm" variant="outline" disabled>Planned</Button>:item.status==='Connected'?<Button size="sm" variant="outline" onClick={()=>setIntegrations((current)=>current.map((x)=>x.id===item.id?{...x,status:'Disconnected'}:x))}>Disconnect</Button>:<Button size="sm" onClick={()=>setIntegrations((current)=>current.map((x)=>x.id===item.id?{...x,status:'Connected'}:x))}><Link2 className="mr-2 h-4 w-4"/>Connect</Button>}</div></div>)}</div><Button className="mt-5" variant="outline"><Plus className="mr-2 h-4 w-4"/>Request New Integration</Button></Section></TabsContent>
 
-export default function SettingsPage() {
-  const queryClient = useQueryClient();
-  const profileQuery = useGetCompanyProfile();
-  const updateMutation = useUpdateCompanyProfile();
-  const [form, setForm] = useState<FormState>(EMPTY_FORM);
-  const [saved, setSaved] = useState(false);
+      <TabsContent value="public" className="mt-0 space-y-5"><Section title="Public Registration" description="Control the external registration link, website pixel and webhook entry point."><div className="space-y-4"><Toggle checked={publicRegistration.enabled} onChange={(v)=>setPublicRegistration({...publicRegistration,enabled:v})} label="Enable public registration link" description="Allow external contacts to submit information through the public form."/><Field label="Organization Slug"><Input value={publicRegistration.slug} onChange={(e)=>setPublicRegistration({...publicRegistration,slug:e.target.value})} placeholder="lander-dispatch"/></Field><Field label="Public Link"><div className="flex gap-2"><Input readOnly value={publicRegistration.slug?`https://app.example.com/public/${publicRegistration.slug}`:"Define a slug first"}/><Button variant="outline" disabled={!publicRegistration.slug}>Copy</Button></div></Field><Field label="Website Pixel (head)"><Textarea rows={4} value={publicRegistration.pixel} onChange={(e)=>setPublicRegistration({...publicRegistration,pixel:e.target.value})} placeholder="Paste or generate the integration script"/></Field><Field label="Webhook URL"><div className="relative"><Webhook className="absolute left-3 top-3 h-4 w-4 text-slate-400"/><Input className="pl-9" value={publicRegistration.webhook} onChange={(e)=>setPublicRegistration({...publicRegistration,webhook:e.target.value})} placeholder="https://..."/></div></Field></div></Section></TabsContent>
 
-  useEffect(() => {
-    setForm(profileToForm(profileQuery.data));
-  }, [profileQuery.data]);
+      <TabsContent value="billing" className="mt-0 space-y-5"><div className="grid gap-5 xl:grid-cols-3"><Section title="Current Plan"><div className="flex items-center gap-2"><CreditCard className="h-5 w-5 text-[#1E3D7A]"/><p className="text-lg font-semibold">Lander Dispatch</p></div><p className="mt-2 text-sm text-slate-500">Billing integration is not configured in this frontend repository.</p><Button className="mt-4" variant="outline">Manage Subscription</Button></Section><Section title="Seats"><p className="text-2xl font-semibold">1</p><p className="mt-1 text-sm text-slate-500">Active operator seat.</p><Button className="mt-4" variant="outline">Add Seats</Button></Section><Section title="Payment Method"><p className="text-sm font-medium">Not available</p><p className="mt-1 text-sm text-slate-500">Connect a billing provider to manage payment methods.</p><Button className="mt-4" variant="outline">Update</Button></Section></div><Section title="Invoices"><div className="py-8 text-center text-sm text-slate-500">Billing invoices will appear here when a billing provider is connected.</div></Section></TabsContent>
 
-  const persistedForm = useMemo(
-    () => profileToForm(profileQuery.data),
-    [profileQuery.data],
-  );
-  const hasChanges = JSON.stringify(form) !== JSON.stringify(persistedForm);
-  const emailIsValid = !form.companyEmail || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.companyEmail);
-  const canSave =
-    Boolean(form.companyName.trim()) &&
-    emailIsValid &&
-    hasChanges &&
-    !updateMutation.isPending;
+      <TabsContent value="users" className="mt-0 space-y-5"><div className="grid gap-5 xl:grid-cols-2"><Section title="Users" description="Invite and manage organization users."><div className="flex justify-end"><Button size="sm" onClick={()=>setInviteOpen(true)}><Plus className="mr-2 h-4 w-4"/>Invite</Button></div><div className="mt-4 space-y-2">{users.length?users.map((user)=><div key={user.id} className="flex items-center justify-between rounded-lg border border-slate-200 p-3"><div><p className="text-sm font-medium">{user.name}</p><p className="text-xs text-slate-500">{user.email} · {user.role}</p></div><div className="flex items-center gap-2"><span className="text-xs text-emerald-600">{user.status}</span><Button size="icon" variant="ghost" onClick={()=>setUsers((x)=>x.filter((i)=>i.id!==user.id))}><Trash2 className="h-4 w-4"/></Button></div></div>):<p className="py-6 text-center text-sm text-slate-500">No additional users.</p>}</div></Section><Section title="Roles & Permissions" description="Role templates and permission scopes."><div className="flex justify-end"><Button size="sm" variant="outline" onClick={()=>setRoleOpen(true)}><UserCog className="mr-2 h-4 w-4"/>Create Role</Button></div><div className="mt-4 space-y-2">{roles.map((role)=><div key={role.id} className="rounded-lg border border-slate-200 p-3"><div className="flex items-start justify-between"><div><p className="text-sm font-semibold">{role.name}</p><p className="mt-1 text-xs text-slate-500">{role.description}</p></div>{role.id!=='owner'&&<Button size="icon" variant="ghost" onClick={()=>setRoles((x)=>x.filter((i)=>i.id!==role.id))}><Trash2 className="h-4 w-4"/></Button>}</div><div className="mt-2 flex flex-wrap gap-1">{role.permissions.map((permission)=><span key={permission} className="rounded bg-slate-100 px-2 py-1 text-[10px] text-slate-600">{permission}</span>)}</div></div>)}</div></Section></div></TabsContent>
+    </Tabs>
 
-  const updateForm = (field: keyof FormState, value: string) => {
-    setSaved(false);
-    setForm((previous) => ({ ...previous, [field]: value }));
-  };
-
-  const handleSave = () => {
-    if (!canSave) return;
-
-    const payload = Object.fromEntries(
-      Object.entries(form).map(([key, value]) => [key, value.trim() || undefined]),
-    );
-
-    updateMutation.mutate(
-      { data: payload },
-      {
-        onSuccess: async () => {
-          await queryClient.invalidateQueries({ queryKey: ["companyProfile"] });
-          setSaved(true);
-        },
-      },
-    );
-  };
-
-  if (profileQuery.isLoading) {
-    return (
-      <div className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground">
-        Loading company configuration…
-      </div>
-    );
-  }
-
-  if (profileQuery.isError) {
-    return (
-      <div className="flex flex-1 items-center justify-center p-8">
-        <div className="max-w-md border border-destructive/40 bg-card p-6 text-center">
-          <AlertTriangle className="mx-auto h-6 w-6 text-destructive" />
-          <p className="mt-3 font-semibold">Company configuration could not be loaded.</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Confirm the API and database are available, then retry.
-          </p>
-          <Button className="mt-4" variant="outline" onClick={() => void profileQuery.refetch()}>
-            Retry
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-4 sm:p-6 lg:p-8">
-      <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">SETTINGS</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Company profile used in invoices, documents and operational communication.
-          </p>
-        </div>
-        <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
-          {saved ? (
-            <span className="flex items-center gap-2 text-sm font-medium text-emerald-600">
-              <CheckCircle2 className="h-4 w-4" />
-              Changes saved
-            </span>
-          ) : hasChanges ? (
-            <span className="text-sm text-amber-600">Unsaved changes</span>
-          ) : null}
-          <Button className="gap-2" onClick={handleSave} disabled={!canSave}>
-            <Save className="h-4 w-4" />
-            {updateMutation.isPending ? "Saving…" : "Save Changes"}
-          </Button>
-        </div>
-      </header>
-
-      {updateMutation.isError ? (
-        <div className="flex items-start gap-3 border border-destructive/40 bg-destructive/5 p-4 text-sm">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
-          <div>
-            <p className="font-semibold text-destructive">Changes were not saved.</p>
-            <p className="mt-1 text-muted-foreground">
-              Review the fields and confirm the API is available before trying again.
-            </p>
-          </div>
-        </div>
-      ) : null}
-
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-        <Section
-          icon={Building2}
-          title="Company Identity"
-          description="Public and legal names displayed throughout the system."
-        >
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <Field label="Company Name *" className="md:col-span-2">
-              <Input
-                required
-                value={form.companyName}
-                onChange={(event) => updateForm("companyName", event.target.value)}
-                placeholder="Lander Dispatch"
-              />
-            </Field>
-            <Field label="Legal Company Name">
-              <Input
-                value={form.legalCompanyName}
-                onChange={(event) => updateForm("legalCompanyName", event.target.value)}
-              />
-            </Field>
-            <Field label="DBA Name">
-              <Input
-                value={form.dbaName}
-                onChange={(event) => updateForm("dbaName", event.target.value)}
-              />
-            </Field>
-            <Field label="Website">
-              <Input
-                value={form.website}
-                onChange={(event) => updateForm("website", event.target.value)}
-                placeholder="https://"
-              />
-            </Field>
-            <Field label="Business Hours">
-              <Input
-                value={form.businessHours}
-                onChange={(event) => updateForm("businessHours", event.target.value)}
-                placeholder="Mon–Fri 8:00 AM–6:00 PM"
-              />
-            </Field>
-          </div>
-        </Section>
-
-        <Section
-          icon={Shield}
-          title="Regulatory Identifiers"
-          description="Identifiers that may appear in invoices and official documents."
-        >
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <Field label="EIN Number">
-              <Input
-                value={form.einNumber}
-                onChange={(event) => updateForm("einNumber", event.target.value)}
-              />
-            </Field>
-            <Field label="MC Number">
-              <Input
-                value={form.mcNumber}
-                onChange={(event) => updateForm("mcNumber", event.target.value)}
-              />
-            </Field>
-            <Field label="USDOT Number">
-              <Input
-                value={form.usdotNumber}
-                onChange={(event) => updateForm("usdotNumber", event.target.value)}
-              />
-            </Field>
-          </div>
-          <div className="border border-border bg-muted/30 p-3 text-xs leading-5 text-muted-foreground">
-            Verify regulatory identifiers before using documents generated by the system.
-          </div>
-        </Section>
-
-        <Section icon={Phone} title="Contact Information">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <Field label="Company Phone">
-              <Input
-                value={form.companyPhone}
-                onChange={(event) => updateForm("companyPhone", event.target.value)}
-              />
-            </Field>
-            <Field label="Company Email">
-              <Input
-                type="email"
-                value={form.companyEmail}
-                onChange={(event) => updateForm("companyEmail", event.target.value)}
-                aria-invalid={!emailIsValid}
-              />
-              {!emailIsValid ? (
-                <p className="text-xs text-destructive">Enter a valid email address.</p>
-              ) : null}
-            </Field>
-          </div>
-        </Section>
-
-        <Section icon={MapPin} title="Company Address">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <Field label="Street Address" className="md:col-span-2 xl:col-span-4">
-              <Input
-                value={form.streetAddress}
-                onChange={(event) => updateForm("streetAddress", event.target.value)}
-              />
-            </Field>
-            <Field label="City" className="md:col-span-2 xl:col-span-1">
-              <Input value={form.city} onChange={(event) => updateForm("city", event.target.value)} />
-            </Field>
-            <Field label="State">
-              <Input
-                value={form.state}
-                onChange={(event) => updateForm("state", event.target.value.toUpperCase())}
-                maxLength={2}
-              />
-            </Field>
-            <Field label="ZIP Code">
-              <Input
-                value={form.zipCode}
-                onChange={(event) => updateForm("zipCode", event.target.value)}
-              />
-            </Field>
-            <Field label="Country">
-              <Input
-                value={form.country}
-                onChange={(event) => updateForm("country", event.target.value)}
-              />
-            </Field>
-          </div>
-        </Section>
-      </div>
-    </div>
-  );
+    <Dialog open={inviteOpen} onOpenChange={setInviteOpen}><DialogContent className="max-w-md"><DialogHeader><DialogTitle>Invite User</DialogTitle></DialogHeader><div className="space-y-4"><Field label="Name"><Input value={invite.name} onChange={(e)=>setInvite({...invite,name:e.target.value})}/></Field><Field label="Email"><Input type="email" value={invite.email} onChange={(e)=>setInvite({...invite,email:e.target.value})}/></Field><Field label="Role"><Select value={invite.role} onValueChange={(v)=>setInvite({...invite,role:v})}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{roles.map((role)=><SelectItem key={role.id} value={role.name}>{role.name}</SelectItem>)}</SelectContent></Select></Field></div><div className="flex justify-end gap-2"><Button variant="outline" onClick={()=>setInviteOpen(false)}>Cancel</Button><Button onClick={()=>{if(!invite.name.trim()||!invite.email.trim())return;setUsers((x)=>[...x,{id:crypto.randomUUID(),name:invite.name.trim(),email:invite.email.trim(),role:invite.role,status:'Invited'}]);setInvite({name:'',email:'',role:'Dispatcher'});setInviteOpen(false)}}>Invite</Button></div></DialogContent></Dialog>
+    <Dialog open={roleOpen} onOpenChange={setRoleOpen}><DialogContent className="max-w-lg"><DialogHeader><DialogTitle>Create Role</DialogTitle></DialogHeader><div className="space-y-4"><Field label="Role Name"><Input value={roleForm.name} onChange={(e)=>setRoleForm({...roleForm,name:e.target.value})}/></Field><Field label="Description"><Textarea value={roleForm.description} onChange={(e)=>setRoleForm({...roleForm,description:e.target.value})}/></Field><Field label="Detailed Permissions"><Textarea value={roleForm.permissions} onChange={(e)=>setRoleForm({...roleForm,permissions:e.target.value})} placeholder="loads, crm, carriers, accounting"/></Field></div><div className="flex justify-end gap-2"><Button variant="outline" onClick={()=>setRoleOpen(false)}>Cancel</Button><Button onClick={()=>{if(!roleForm.name.trim())return;setRoles((x)=>[...x,{id:crypto.randomUUID(),name:roleForm.name.trim(),description:roleForm.description.trim(),permissions:roleForm.permissions.split(',').map((x)=>x.trim()).filter(Boolean)}]);setRoleForm({name:'',description:'',permissions:'loads, crm'});setRoleOpen(false)}}>Create Role</Button></div></DialogContent></Dialog>
+  </div>;
 }
