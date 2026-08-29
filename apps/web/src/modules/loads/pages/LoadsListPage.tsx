@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useDeleteLoad,
@@ -32,9 +32,7 @@ import { StatusBadge } from "@/shared/components/ui/status-badge";
 import { formatCurrency, formatDate } from "@/shared/lib/utils";
 import {
   ArrowRight,
-  FileText,
   MoreHorizontal,
-  Plus,
   Search,
 } from "lucide-react";
 import { LoadFormModal } from "../components/LoadFormModal";
@@ -94,6 +92,17 @@ export default function LoadsListPage() {
   const [viewLoad, setViewLoad] = useState<Load | null>(null);
   const [editLoad, setEditLoad] = useState<Load | null>(null);
 
+  useEffect(() => {
+    const openCreate = () => setCreateOpen(true);
+    const openImport = () => setImportOpen(true);
+    window.addEventListener("lander:loads-create", openCreate);
+    window.addEventListener("lander:loads-import-pdf", openImport);
+    return () => {
+      window.removeEventListener("lander:loads-create", openCreate);
+      window.removeEventListener("lander:loads-import-pdf", openImport);
+    };
+  }, []);
+
   const queryClient = useQueryClient();
   const deleteMutation = useDeleteLoad({
     mutation: {
@@ -133,16 +142,6 @@ export default function LoadsListPage() {
           <p className="mt-1 text-sm text-muted-foreground">
             Active and historical freight operations.
           </p>
-        </div>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <Button variant="outline" className="gap-2" onClick={() => setImportOpen(true)}>
-            <FileText className="h-4 w-4" />
-            Import PDF
-          </Button>
-          <Button className="gap-2" onClick={() => setCreateOpen(true)}>
-            <Plus className="h-4 w-4" />
-            Create Load
-          </Button>
         </div>
       </header>
 
