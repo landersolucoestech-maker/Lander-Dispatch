@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import {
@@ -37,7 +37,7 @@ import {
 } from "@/shared/components/ui/dropdown-menu";
 import { StatusBadge } from "@/shared/components/ui/status-badge";
 import { formatCurrency, formatDate } from "@/shared/lib/utils";
-import { Building2, ContactRound, MoreHorizontal, Plus, Search } from "lucide-react";
+import { Building2, ContactRound, MoreHorizontal, Search } from "lucide-react";
 import { ContactFormModal } from "../components/ContactFormModal";
 import { ContactViewModal } from "../components/ContactViewModal";
 import { DirectContactFormModal } from "../components/DirectContactFormModal";
@@ -143,6 +143,23 @@ export default function CRMPage() {
   const [createLeadOpen, setCreateLeadOpen] = useState(false);
   const [viewLead, setViewLead] = useState<CrmLead | null>(null);
   const [editLead, setEditLead] = useState<CrmLead | null>(null);
+
+  useEffect(() => {
+    const createContact = () => {
+      setTab("contacts");
+      setCreateContactOpen(true);
+    };
+    const createLead = () => {
+      setTab("leads");
+      setCreateLeadOpen(true);
+    };
+    window.addEventListener("lander:crm-create-contact", createContact);
+    window.addEventListener("lander:crm-create-lead", createLead);
+    return () => {
+      window.removeEventListener("lander:crm-create-contact", createContact);
+      window.removeEventListener("lander:crm-create-lead", createLead);
+    };
+  }, []);
 
   const contactsQuery = useListCrmContacts(
     { search: contactSearch || undefined, page: 1, pageSize: 200 },
@@ -261,11 +278,6 @@ export default function CRMPage() {
     }
   };
 
-  const createCurrent = () => {
-    if (tab === "contacts") setCreateContactOpen(true);
-    else setCreateLeadOpen(true);
-  };
-
   return (
     <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-4 sm:p-6 lg:p-8">
       <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -273,10 +285,6 @@ export default function CRMPage() {
           <h1 className="text-2xl font-bold tracking-tight">CRM</h1>
           <p className="mt-1 text-sm text-muted-foreground">Contacts and demand prospects.</p>
         </div>
-        <Button className="gap-2" onClick={createCurrent}>
-          <Plus className="h-4 w-4" />
-          {tab === "contacts" ? "Create Contact" : "Create Lead"}
-        </Button>
       </header>
 
       <div className="flex gap-1 overflow-x-auto border-b border-border">
