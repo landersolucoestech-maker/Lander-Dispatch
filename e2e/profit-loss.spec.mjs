@@ -18,11 +18,12 @@ test.describe("Profit and loss", () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/accounting/profit-loss");
 
+    const header = page.getByRole("banner");
     await expect(
-      page.getByRole("heading", { name: "PROFIT & LOSS", level: 1 }),
+      header.getByRole("heading", { name: "PROFIT & LOSS", level: 1 }),
     ).toBeVisible();
     await expect(
-      page.getByText(
+      header.getByText(
         "Financial performance based on recorded transactions.",
         { exact: true },
       ),
