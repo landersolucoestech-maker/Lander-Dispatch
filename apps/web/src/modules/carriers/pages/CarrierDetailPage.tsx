@@ -5,7 +5,7 @@ import type { Carrier } from "@workspace/api-client-react";
 import { Button } from "@/shared/components/ui/button";
 import { StatusBadge } from "@/shared/components/ui/status-badge";
 import { CarrierFormModal } from "../components/CarrierFormModal";
-import { formatCurrency, formatDate } from "@/shared/lib/utils";
+import { formatCurrency, formatDate, formatDecimal } from "@/shared/lib/utils";
 import {
   ArrowLeft,
   Building2,
@@ -55,8 +55,10 @@ type CarrierWithDetails = Carrier & {
   emergencyContactName?: string | null;
   emergencyPhone?: string | null;
   emergencyPhone2?: string | null;
-  weeklyMinimumAmount?: number | null;
+  weeklyMinimumAmount?: number | string | null;
   totalTripsPerWeek?: number | null;
+  ratePerMile?: number | string | null;
+  factoringFee?: number | string | null;
   fleetData?: FleetEntry[];
 };
 
@@ -155,6 +157,8 @@ export default function CarrierDetailPage() {
 
   const carrier = carrierQuery.data as CarrierWithDetails;
   const fleet = carrier.fleetData ?? [];
+  const rating = formatDecimal(carrier.rating, 1);
+  const factoringFee = formatDecimal(carrier.factoringFee, 2);
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 overflow-y-auto p-4 sm:p-6 lg:p-8">
@@ -195,7 +199,7 @@ export default function CarrierDetailPage() {
             <Star className="h-4 w-4 fill-primary text-primary" />
           </div>
           <p className="mt-2 text-sm font-semibold">
-            {carrier.rating == null ? "Not rated" : `${carrier.rating.toFixed(1)} / 5.0`}
+            {rating == null ? "Not rated" : `${rating} / 5.0`}
           </p>
         </div>
         <div className="border border-border bg-card p-4">
@@ -307,7 +311,7 @@ export default function CarrierDetailPage() {
               <DataField label="Factoring Company" value={carrier.factoringCompany || "None"} />
               <DataField
                 label="Factoring Fee"
-                value={carrier.factoringFee == null ? "—" : `${carrier.factoringFee.toFixed(2)}%`}
+                value={factoringFee == null ? "—" : `${factoringFee}%`}
               />
             </div>
           </Section>
