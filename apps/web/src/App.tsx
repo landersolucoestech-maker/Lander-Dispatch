@@ -20,7 +20,13 @@ import DriverDetailPage from '@/modules/crm/pages/DriverDetailPage';
 import AgendaPage from '@/modules/agenda/pages/AgendaPage';
 import ChatPage from '@/modules/chat/pages/ChatPage';
 import TasksPage from '@/modules/tasks/pages/TasksPage';
-import MarketingPage from '@/modules/marketing/pages/MarketingPage';
+import MarketingOverviewPage from '@/modules/marketing/pages/MarketingOverviewPage';
+import MarketingBriefingPage from '@/modules/marketing/pages/MarketingBriefingPage';
+import MarketingCalendarPage from '@/modules/marketing/pages/MarketingCalendarPage';
+import MarketingCampaignsPage from '@/modules/marketing/pages/MarketingCampaignsPage';
+import MarketingAiCreativePage from '@/modules/marketing/pages/MarketingAiCreativePage';
+import MarketingMetricsPage from '@/modules/marketing/pages/MarketingMetricsPage';
+import MarketingTasksPage from '@/modules/marketing/pages/MarketingTasksPage';
 import InvoicesListPage from '@/modules/accounting/pages/InvoicesListPage';
 import InvoiceDetailPage from '@/modules/accounting/pages/InvoiceDetailPage';
 import TransactionsListPage from '@/modules/accounting/pages/TransactionsListPage';
@@ -54,7 +60,14 @@ function AppRouter() {
     <Route path="/agenda" component={AgendaPage} />
     <Route path="/chat" component={ChatPage} />
     <Route path="/tasks" component={TasksPage} />
-    <Route path="/marketing" component={MarketingPage} />
+    <Route path="/marketing" component={() => <Redirect to="/marketing/overview" />} />
+    <Route path="/marketing/overview" component={MarketingOverviewPage} />
+    <Route path="/marketing/briefing" component={MarketingBriefingPage} />
+    <Route path="/marketing/calendar" component={MarketingCalendarPage} />
+    <Route path="/marketing/campaigns" component={MarketingCampaignsPage} />
+    <Route path="/marketing/ai-creative" component={MarketingAiCreativePage} />
+    <Route path="/marketing/metrics" component={MarketingMetricsPage} />
+    <Route path="/marketing/tasks" component={MarketingTasksPage} />
     <Route path="/accounting/invoices" component={InvoicesListPage} /><Route path="/accounting/invoices/:invoiceId" component={InvoiceDetailPage} /><Route path="/accounting/transactions" component={TransactionsListPage} /><Route path="/accounting/transactions/:transactionId" component={TransactionDetailPage} /><Route path="/accounting/profit-loss" component={ProfitLossPage} />
     <Route path="/documents" component={DocumentsPage} /><Route path="/audit-log" component={AuditLogPage} /><Route path="/reports" component={ReportsPage} /><Route path="/settings" component={SettingsPage} />
     <Route component={NotFound} />
