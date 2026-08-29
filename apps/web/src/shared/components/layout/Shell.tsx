@@ -55,38 +55,45 @@ const NAV_ITEMS: NavigationItem[] = [
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
-const HEADER_META: Array<{ match: string; title: string; description: string; module: string }> = [
-  { match: "/accounting/profit-loss", title: "PROFIT & LOSS", description: "Financial performance based on recorded transactions.", module: "profit-loss" },
-  { match: "/accounting/transactions", title: "TRANSACTIONS", description: "Income, expenses and general-ledger activity.", module: "transactions" },
-  { match: "/accounting/invoices", title: "INVOICES", description: "Commission receivables, balances and payment status.", module: "invoices" },
-  { match: "/dashboard", title: "Dashboard", description: "Overview of your dispatch operation and recent activity.", module: "dashboard" },
-  { match: "/loads", title: "LOADS", description: "Active and historical freight operations.", module: "loads" },
-  { match: "/crm", title: "CRM", description: "Contacts and demand prospects.", module: "crm" },
-  { match: "/carriers", title: "Carrier Network", description: "Directory & Status", module: "carriers" },
-  { match: "/brokers", title: "Broker Partners", description: "Directory & Status", module: "brokers" },
-  { match: "/documents", title: "DOCUMENTS", description: "Private operational files stored in MinIO/S3-compatible storage.", module: "documents" },
-  { match: "/reports", title: "REPORTS", description: "Operational and financial performance using live system data.", module: "reports" },
-  { match: "/audit-log", title: "AUDIT LOG", description: "Read-only operational history for security, accountability and troubleshooting.", module: "audit-log" },
-];
+const MODULE_ROUTES = [
+  { match: "/accounting/profit-loss", module: "profit-loss" },
+  { match: "/accounting/transactions", module: "transactions" },
+  { match: "/accounting/invoices", module: "invoices" },
+  { match: "/dashboard", module: "dashboard" },
+  { match: "/loads", module: "loads" },
+  { match: "/crm", module: "crm" },
+  { match: "/carriers", module: "carriers" },
+  { match: "/brokers", module: "brokers" },
+  { match: "/documents", module: "documents" },
+  { match: "/reports", module: "reports" },
+  { match: "/audit-log", module: "audit-log" },
+] as const;
 
-function getPageMeta(location: string) {
-  const configured = HEADER_META.find((item) => location.startsWith(item.match));
-  if (configured) return configured;
+const TITLE_SOURCE_SELECTORS: Record<string, string> = {
+  dashboard: 'main[data-module="dashboard"] > main > header',
+  loads: 'main[data-module="loads"] > div > header',
+  crm: 'main[data-module="crm"] > div > header',
+  carriers: 'main[data-module="carriers"] > div > div:first-child',
+  brokers: 'main[data-module="brokers"] > div > div:first-child',
+  documents: 'main[data-module="documents"] > div > header',
+  invoices: 'main[data-module="invoices"] > div > header',
+  transactions: 'main[data-module="transactions"] > div > header',
+  "profit-loss": 'main[data-module="profit-loss"] > div > header > div:first-child',
+  reports: 'main[data-module="reports"] > div > header > div:first-child',
+  "audit-log": 'main[data-module="audit-log"] > div > header',
+};
 
+function getPageLabel(location: string) {
   const allItems = NAV_ITEMS.flatMap((item) => [
     { href: item.href, label: item.label },
     ...(item.sub ?? []),
   ]);
-  const label =
+
+  return (
     allItems
       .sort((left, right) => right.href.length - left.href.length)
-      .find((item) => location.startsWith(item.href))?.label ?? "Lander Dispatch";
-
-  return {
-    title: label,
-    description: "Smart dispatch. Stronger miles.",
-    module: "default",
-  };
+      .find((item) => location.startsWith(item.href))?.label ?? "Lander Dispatch"
+  );
 }
 
 function Brand({ compact = false }: { compact?: boolean }) {
@@ -301,10 +308,44 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [crmTab, setCrmTab] = useState<CrmTab>("contacts");
+  const module = useMemo(
+    () => MODULE_ROUTES.find((item) => location.startsWith(item.match))?.module ?? "default",
+    [location],
+  );
+  const [headerCopy, setHeaderCopy] = useState(() => ({
+    title: getPageLabel(location),
+    description: "Smart dispatch. Stronger miles.",
+  }));
   const { user, logout } = useAuth();
-  const pageMeta = useMemo(() => getPageMeta(location), [location]);
   const initials = `${user?.firstName?.[0] ?? ""}${user?.lastName?.[0] ?? ""}` || "OP";
   const displayName = [user?.firstName, user?.lastName].filter(Boolean).join(" ") || "Operator";
+
+  useEffect(() => {
+    const fallback = {
+      title: getPageLabel(location),
+      description: module === "default" ? "Smart dispatch. Stronger miles." : "",
+    };
+    setHeaderCopy(fallback);
+
+    const selector = TITLE_SOURCE_SELECTORS[module];
+    if (!selector) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      const source = document.querySelector(selector);
+      if (!source) return;
+
+      const title = source.querySelector("h1")?.textContent?.trim();
+      const description = source.querySelector("p")?.textContent?.trim();
+      if (!title) return;
+
+      setHeaderCopy({
+        title,
+        description: description ?? "",
+      });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [location, module]);
 
   useEffect(() => {
     if (location !== "/crm") {
@@ -351,8 +392,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </button>
 
           <div className="min-w-0 flex-1">
-            <p className="truncate text-base font-bold text-[#0B1E36]">{pageMeta.title}</p>
-            <p className="hidden truncate text-xs text-slate-500 sm:block">{pageMeta.description}</p>
+            <p className="truncate text-base font-bold text-[#0B1E36]">{headerCopy.title}</p>
+            {headerCopy.description ? (
+              <p className="hidden truncate text-xs text-slate-500 sm:block">{headerCopy.description}</p>
+            ) : null}
           </div>
 
           <div className="relative flex shrink-0 items-center gap-2">
@@ -424,7 +467,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main data-module={pageMeta.module} className="flex min-h-0 flex-1 flex-col overflow-hidden">{children}</main>
+        <main data-module={module} className="flex min-h-0 flex-1 flex-col overflow-hidden">{children}</main>
       </div>
     </div>
   );
