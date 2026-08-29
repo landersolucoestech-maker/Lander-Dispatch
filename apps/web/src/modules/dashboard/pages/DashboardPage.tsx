@@ -16,9 +16,11 @@ export default function DashboardPage() {
 
   return (
     <main className="flex min-w-0 flex-1 flex-col gap-6 overflow-y-auto p-4 sm:p-6 lg:p-8">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">DASHBOARD</h1>
-        <p className="text-sm text-muted-foreground">
+      <header className="flex flex-col gap-1 border-b border-slate-200 pb-5">
+        <h1 className="text-2xl font-extrabold tracking-tight text-[#0B1E36] sm:text-3xl">
+          Dashboard
+        </h1>
+        <p className="text-sm text-slate-500">
           Overview of your dispatch operation and recent activity.
         </p>
       </header>
@@ -56,17 +58,21 @@ export default function DashboardPage() {
       </section>
 
       <section className="grid min-w-0 grid-cols-1 gap-6 xl:grid-cols-3">
-        <div className="min-w-0 space-y-4 xl:col-span-2">
-          <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            <Clock className="h-4 w-4" aria-hidden="true" />
+        <div className="lander-surface min-w-0 space-y-4 p-5 xl:col-span-2">
+          <h2 className="flex items-center gap-2 text-sm font-bold text-[#0B1E36]">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-[#1E3D7A]">
+              <Clock className="h-4 w-4" aria-hidden="true" />
+            </span>
             Recent Activity
           </h2>
           <ActivityFeed activity={activity} isLoading={isActivityLoading} />
         </div>
 
-        <div className="min-w-0 space-y-4">
-          <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            <Bell className="h-4 w-4" aria-hidden="true" />
+        <div className="lander-surface min-w-0 space-y-4 p-5">
+          <h2 className="flex items-center gap-2 text-sm font-bold text-[#0B1E36]">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-[#1E3D7A]">
+              <Bell className="h-4 w-4" aria-hidden="true" />
+            </span>
             System Alerts
           </h2>
           <AlertsBox alerts={alerts} isLoading={isAlertsLoading} />
