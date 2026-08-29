@@ -3,11 +3,12 @@ import { expect, test } from "./playwright.mjs";
 test("loads live reports and exposes detailed report navigation", async ({ page }) => {
   await page.goto("/reports");
 
+  const header = page.getByRole("banner");
   await expect(
-    page.getByRole("heading", { name: "REPORTS", level: 1 }),
+    header.getByRole("heading", { name: "REPORTS", level: 1 }),
   ).toBeVisible();
   await expect(
-    page.getByText(
+    header.getByText(
       "Operational and financial performance using live system data.",
       { exact: true },
     ),
