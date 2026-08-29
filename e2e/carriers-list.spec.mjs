@@ -4,10 +4,11 @@ test("renders the Carrier directory and non-destructive filters", async ({ page 
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/carriers");
 
+  const header = page.getByRole("banner");
   await expect(
-    page.getByRole("heading", { name: "Carrier Network", level: 1 }),
+    header.getByRole("heading", { name: "Carrier Network", level: 1 }),
   ).toBeVisible();
-  await expect(page.getByText("Directory & Status", { exact: true })).toBeVisible();
+  await expect(header.getByText("Directory & Status", { exact: true })).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Add Carrier" }),
   ).toBeEnabled();
