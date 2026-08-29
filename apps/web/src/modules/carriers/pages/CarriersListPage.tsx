@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useListCarriers } from "@workspace/api-client-react";
 import type { Carrier } from "@workspace/api-client-react";
 import { Button } from "@/shared/components/ui/button";
@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
 import { StatusBadge } from "@/shared/components/ui/status-badge";
 import { formatDate } from "@/shared/lib/utils";
-import { Search, Plus } from "lucide-react";
+import { Search } from "lucide-react";
 import { CarrierFormModal } from "../components/CarrierFormModal";
 import { CarrierViewModal } from "../components/CarrierViewModal";
 
@@ -18,6 +18,12 @@ export default function CarriersListPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [viewCarrier, setViewCarrier] = useState<Carrier | null>(null);
 
+  useEffect(() => {
+    const openCreate = () => setCreateOpen(true);
+    window.addEventListener("lander:carriers-add", openCreate);
+    return () => window.removeEventListener("lander:carriers-add", openCreate);
+  }, []);
+
   const { data, isLoading } = useListCarriers({ search: search || undefined, status: status !== "all" ? status : undefined, page, pageSize: 50 }, { query: { queryKey: ["carriers", search, status, page] } });
 
   return (
@@ -27,9 +33,6 @@ export default function CarriersListPage() {
           <h1 className="text-2xl font-bold tracking-tight uppercase">Carrier Network</h1>
           <p className="text-sm font-mono text-muted-foreground">Directory & Status</p>
         </div>
-        <Button className="gap-2" onClick={() => setCreateOpen(true)}>
-          <Plus className="w-4 h-4" /> Add Carrier
-        </Button>
       </div>
 
       <div className="flex items-center gap-4 bg-card p-4 border border-border">
