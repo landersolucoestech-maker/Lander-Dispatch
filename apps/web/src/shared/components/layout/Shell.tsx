@@ -9,12 +9,15 @@ import {
   Calculator,
   ChevronDown,
   FileClock,
+  FileText,
   Files,
   LayoutDashboard,
   LogOut,
   Menu,
+  Plus,
   Settings,
   Truck,
+  UserPlus,
   Users,
   X,
 } from "lucide-react";
@@ -181,6 +184,53 @@ function SidebarContent({ location, onNavigate }: { location: string; onNavigate
   );
 }
 
+function HeaderActions({ location }: { location: string }) {
+  const dispatch = (name: string) => window.dispatchEvent(new CustomEvent(name));
+  const secondaryClass = "hidden h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-[#1E3D7A] sm:flex";
+  const primaryClass = "hidden h-10 items-center gap-2 rounded-lg bg-[#1E3D7A] px-3 text-sm font-semibold text-white transition-colors hover:bg-[#173462] sm:flex";
+
+  if (location === "/loads") {
+    return (
+      <div className="flex items-center gap-2">
+        <button type="button" className={secondaryClass} onClick={() => dispatch("lander:loads-import-pdf")}>
+          <FileText className="h-4 w-4" />
+          Import PDF
+        </button>
+        <button type="button" className={primaryClass} onClick={() => dispatch("lander:loads-create")}>
+          <Plus className="h-4 w-4" />
+          Create Load
+        </button>
+      </div>
+    );
+  }
+
+  if (location === "/crm") {
+    return (
+      <div className="flex items-center gap-2">
+        <button type="button" className={secondaryClass} onClick={() => dispatch("lander:crm-create-contact")}>
+          <UserPlus className="h-4 w-4" />
+          Create Contact
+        </button>
+        <button type="button" className={primaryClass} onClick={() => dispatch("lander:crm-create-lead")}>
+          <Plus className="h-4 w-4" />
+          Create Lead
+        </button>
+      </div>
+    );
+  }
+
+  if (location === "/carriers") {
+    return (
+      <button type="button" className={primaryClass} onClick={() => dispatch("lander:carriers-add")}>
+        <Plus className="h-4 w-4" />
+        Add Carrier
+      </button>
+    );
+  }
+
+  return null;
+}
+
 export function Shell({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -221,6 +271,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="relative flex shrink-0 items-center gap-2">
+            <HeaderActions location={location} />
+
             <div className="relative">
               <button
                 type="button"
