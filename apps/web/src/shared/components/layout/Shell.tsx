@@ -104,9 +104,9 @@ function Navigation({ location, onNavigate }: { location: string; onNavigate: ()
               href={item.href}
               onClick={onNavigate}
               className={cn(
-                "flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-all",
+                "flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-semibold transition-all",
                 active
-                  ? "bg-[#edf3ff] font-semibold text-[#1E3D7A] shadow-[inset_3px_0_0_#1E3D7A]"
+                  ? "bg-[#edf3ff] text-[#1E3D7A] shadow-[inset_3px_0_0_#1E3D7A]"
                   : "text-slate-600 hover:bg-slate-50 hover:text-[#0B1E36]",
               )}
             >
@@ -125,9 +125,9 @@ function Navigation({ location, onNavigate }: { location: string; onNavigate: ()
                     href={subItem.href}
                     onClick={onNavigate}
                     className={cn(
-                      "rounded-md px-2 py-2 text-sm transition-colors",
+                      "rounded-md px-2 py-2 text-sm font-medium transition-colors",
                       isActive(subItem.href, true)
-                        ? "bg-blue-50 font-semibold text-[#1E3D7A]"
+                        ? "bg-blue-50 text-[#1E3D7A]"
                         : "text-slate-500 hover:bg-slate-50 hover:text-[#0B1E36]",
                     )}
                   >
