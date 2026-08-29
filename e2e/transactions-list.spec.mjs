@@ -34,7 +34,9 @@ test.describe("Transactions list", () => {
     await expect(page.getByText("Total Income", { exact: true })).toBeVisible();
     await expect(page.getByText("Total Expenses", { exact: true })).toBeVisible();
     await expect(page.getByText("Net Balance", { exact: true })).toBeVisible();
-    await expect(page.getByText("Pending", { exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Pending", exact: true }),
+    ).toBeVisible();
 
     const table = page.getByRole("table");
     await expect(table).toBeVisible();
