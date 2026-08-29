@@ -21,17 +21,23 @@ interface ErrorEnvelope {
   error?: string;
 }
 
-const isStaticPreview = import.meta.env.PROD && import.meta.env.BASE_URL !== '/';
+const isStaticPreview =
+  typeof window !== 'undefined' && window.location.hostname.endsWith('.github.io');
 
-const previewUser = {
+const previewUser: AuthUser = {
   id: 'frontend-preview',
   email: 'preview@landerdispatch.local',
-  name: 'Lander Dispatch',
-} as AuthUser;
+  firstName: 'Lander',
+  lastName: 'Dispatch',
+  profileImageUrl: null,
+};
 
 function appPath(path: string): string {
-  const base = import.meta.env.BASE_URL.replace(/\/$/, '');
-  return `${base}${path}` || path;
+  if (!isStaticPreview || typeof window === 'undefined') return path;
+
+  const [repository] = window.location.pathname.split('/').filter(Boolean);
+  const base = repository ? `/${repository}` : '';
+  return `${base}${path}`;
 }
 
 export function useAuth(): AuthState {
