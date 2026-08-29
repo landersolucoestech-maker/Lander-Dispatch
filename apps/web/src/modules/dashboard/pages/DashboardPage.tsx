@@ -1,18 +1,28 @@
 import { ActivityFeed } from "@/modules/dashboard/components/ActivityFeed";
-import { AlertsBox } from "@/modules/dashboard/components/AlertsBox";
 import { KpiCard } from "@/modules/dashboard/components/KpiCard";
 import { formatCurrency } from "@/shared/lib/utils";
 import {
   useGetDashboardActivity,
-  useGetDashboardAlerts,
   useGetDashboardKpis,
 } from "@workspace/api-client-react";
-import { Bell, CheckCircle2, Clock, TrendingUp, Truck, Users } from "lucide-react";
+import {
+  CalendarDays,
+  CheckCircle2,
+  Clock,
+  TrendingUp,
+  Truck,
+  Users,
+} from "lucide-react";
 
 export default function DashboardPage() {
   const { data: kpis, isLoading: isKpisLoading } = useGetDashboardKpis();
   const { data: activity, isLoading: isActivityLoading } = useGetDashboardActivity();
-  const { data: alerts, isLoading: isAlertsLoading } = useGetDashboardAlerts();
+
+  const todayLabel = new Intl.DateTimeFormat("en-US", {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+  }).format(new Date());
 
   return (
     <main className="flex min-w-0 flex-1 flex-col gap-6 overflow-y-auto p-4 sm:p-6 lg:p-8">
@@ -68,14 +78,24 @@ export default function DashboardPage() {
           <ActivityFeed activity={activity} isLoading={isActivityLoading} />
         </div>
 
-        <div className="lander-surface min-w-0 space-y-4 p-5">
-          <h2 className="flex items-center gap-2 text-sm font-bold text-[#0B1E36]">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-[#1E3D7A]">
-              <Bell className="h-4 w-4" aria-hidden="true" />
-            </span>
-            System Alerts
-          </h2>
-          <AlertsBox alerts={alerts} isLoading={isAlertsLoading} />
+        <div className="lander-surface min-w-0 p-5">
+          <div className="flex items-start justify-between gap-4">
+            <h2 className="flex items-center gap-2 text-sm font-bold text-[#0B1E36]">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-[#1E3D7A]">
+                <CalendarDays className="h-4 w-4" aria-hidden="true" />
+              </span>
+              Today&apos;s Agenda
+            </h2>
+            <span className="pt-1 text-xs text-slate-400">{todayLabel}</span>
+          </div>
+
+          <div className="mt-5 flex min-h-40 flex-col items-center justify-center rounded-lg border border-dashed border-slate-200 bg-slate-50/60 px-5 text-center">
+            <CalendarDays className="h-6 w-6 text-slate-400" aria-hidden="true" />
+            <p className="mt-3 text-sm font-medium text-[#0B1E36]">No items scheduled for today</p>
+            <p className="mt-1 text-xs leading-5 text-slate-500">
+              Today&apos;s tasks, appointments and follow-ups will appear here.
+            </p>
+          </div>
         </div>
       </section>
     </main>
