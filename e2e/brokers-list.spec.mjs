@@ -34,15 +34,16 @@ test("renders the Broker directory and non-destructive filters", async ({ page }
     table.getByRole("columnheader", { name: "Status" }),
   ).toBeVisible();
 
+  const meridianRow = table.getByRole("row").filter({
+    has: table.getByText("Meridian Auto Freight", { exact: true }),
+  });
+  await expect(meridianRow).toBeVisible();
+  await expect(meridianRow.getByText("MC: MC-812340", { exact: true })).toBeVisible();
   await expect(
-    table.getByText("Meridian Auto Freight", { exact: true }),
+    meridianRow.getByText("DOT: USDOT-2481063", { exact: true }),
   ).toBeVisible();
-  await expect(table.getByText("MC: MC-812340", { exact: true })).toBeVisible();
-  await expect(
-    table.getByText("DOT: USDOT-2481063", { exact: true }),
-  ).toBeVisible();
-  await expect(table.getByText("Net 15", { exact: true })).toBeVisible();
-  await expect(table.getByText("4.8", { exact: true })).toBeVisible();
+  await expect(meridianRow.getByText("Net 15", { exact: true })).toBeVisible();
+  await expect(meridianRow.getByText("4.8", { exact: true })).toBeVisible();
 
   const statusFilter = page.getByRole("combobox");
   await statusFilter.click();
