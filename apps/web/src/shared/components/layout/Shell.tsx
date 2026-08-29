@@ -309,7 +309,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const [accountOpen, setAccountOpen] = useState(false);
   const [crmTab, setCrmTab] = useState<CrmTab>("contacts");
   const module = useMemo(
-    () => MODULE_ROUTES.find((item) => location.startsWith(item.match))?.module ?? "default",
+    () => MODULE_ROUTES.find((item) => location === item.match)?.module ?? "default",
     [location],
   );
   const [headerCopy, setHeaderCopy] = useState(() => ({
@@ -392,7 +392,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </button>
 
           <div className="min-w-0 flex-1">
-            <p className="truncate text-base font-bold text-[#0B1E36]">{headerCopy.title}</p>
+            <h1 className="truncate text-base font-bold text-[#0B1E36]">{headerCopy.title}</h1>
             {headerCopy.description ? (
               <p className="hidden truncate text-xs text-slate-500 sm:block">{headerCopy.description}</p>
             ) : null}
