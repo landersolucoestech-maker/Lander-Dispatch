@@ -392,7 +392,11 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </button>
 
           <div className="min-w-0 flex-1">
-            <h1 className="truncate text-base font-bold text-[#0B1E36]">{headerCopy.title}</h1>
+            {module === "default" ? (
+              <p className="truncate text-base font-bold text-[#0B1E36]">{headerCopy.title}</p>
+            ) : (
+              <h1 className="truncate text-base font-bold text-[#0B1E36]">{headerCopy.title}</h1>
+            )}
             {headerCopy.description ? (
               <p className="hidden truncate text-xs text-slate-500 sm:block">{headerCopy.description}</p>
             ) : null}
@@ -412,7 +416,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 }}
                 className="relative flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-[#1E3D7A]"
               >
-                <Bell className="h-[18px] w-[18px]" />
+                <Bell className="h-[18px] w-[18px] />
               </button>
 
               {notificationsOpen ? (
