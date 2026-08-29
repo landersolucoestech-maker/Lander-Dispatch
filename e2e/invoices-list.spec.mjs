@@ -18,11 +18,12 @@ test.describe("Invoices list", () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/accounting/invoices");
 
+    const header = page.getByRole("banner");
     await expect(
-      page.getByRole("heading", { name: "INVOICES", level: 1 }),
+      header.getByRole("heading", { name: "INVOICES", level: 1 }),
     ).toBeVisible();
     await expect(
-      page.getByText(
+      header.getByText(
         "Commission receivables, balances and payment status.",
         { exact: true },
       ),
