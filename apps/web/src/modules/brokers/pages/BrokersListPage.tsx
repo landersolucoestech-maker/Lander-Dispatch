@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useListBrokers } from "@workspace/api-client-react";
 import type { Broker } from "@workspace/api-client-react";
 import { Button } from "@/shared/components/ui/button";
@@ -6,7 +6,7 @@ import { Input } from "@/shared/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
 import { StatusBadge } from "@/shared/components/ui/status-badge";
-import { Search, Plus } from "lucide-react";
+import { Search } from "lucide-react";
 import { BrokerFormModal } from "../components/BrokerFormModal";
 import { BrokerViewModal } from "../components/BrokerViewModal";
 
@@ -17,6 +17,12 @@ export default function BrokersListPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [viewBroker, setViewBroker] = useState<Broker | null>(null);
 
+  useEffect(() => {
+    const openCreate = () => setCreateOpen(true);
+    window.addEventListener("lander:brokers-add", openCreate);
+    return () => window.removeEventListener("lander:brokers-add", openCreate);
+  }, []);
+
   const { data, isLoading } = useListBrokers({ search: search || undefined, status: status !== "all" ? status : undefined, page, pageSize: 50 }, { query: { queryKey: ["brokers", search, status, page] } });
 
   return (
@@ -26,9 +32,6 @@ export default function BrokersListPage() {
           <h1 className="text-2xl font-bold tracking-tight uppercase">Broker Partners</h1>
           <p className="text-sm font-mono text-muted-foreground">Directory & Status</p>
         </div>
-        <Button className="gap-2" onClick={() => setCreateOpen(true)}>
-          <Plus className="w-4 h-4" /> Add Broker
-        </Button>
       </div>
 
       <div className="flex items-center gap-4 bg-card p-4 border border-border">
@@ -99,31 +102,15 @@ export default function BrokersListPage() {
                     <span className="text-muted-foreground">{broker.phone || "--"}</span>
                   </div>
                 </TableCell>
-                <TableCell className="font-mono text-xs text-muted-foreground">
-                  {broker.paymentTerms || "--"}
-                </TableCell>
+                <TableCell className="font-mono text-xs text-muted-foreground">{broker.paymentTerms || "--"}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-1 font-mono text-xs">
-                    {broker.rating ? (
-                      <>
-                        <span className="text-primary">{broker.rating.toFixed(1)}</span>
-                        <span className="text-muted-foreground">/5.0</span>
-                      </>
-                    ) : "--"}
+                    {broker.rating ? (<><span className="text-primary">{broker.rating.toFixed(1)}</span><span className="text-muted-foreground">/5.0</span></>) : "--"}
                   </div>
                 </TableCell>
+                <TableCell><StatusBadge status={broker.status} /></TableCell>
                 <TableCell>
-                  <StatusBadge status={broker.status} />
-                </TableCell>
-                <TableCell>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="font-mono text-[10px]"
-                    onClick={(e) => { e.stopPropagation(); setViewBroker(broker); }}
-                  >
-                    VIEW
-                  </Button>
+                  <Button variant="ghost" size="sm" className="font-mono text-[10px]" onClick={(e) => { e.stopPropagation(); setViewBroker(broker); }}>VIEW</Button>
                 </TableCell>
               </TableRow>
             ))}
@@ -133,9 +120,7 @@ export default function BrokersListPage() {
 
       {data?.meta && data.meta.totalPages > 1 && (
         <div className="flex items-center justify-between mt-4">
-          <div className="font-mono text-xs text-muted-foreground">
-            PAGE {data.meta.page} OF {data.meta.totalPages}
-          </div>
+          <div className="font-mono text-xs text-muted-foreground">PAGE {data.meta.page} OF {data.meta.totalPages}</div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>PREV</Button>
             <Button variant="outline" size="sm" disabled={page === data.meta.totalPages} onClick={() => setPage(p => p + 1)}>NEXT</Button>
