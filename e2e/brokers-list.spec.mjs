@@ -35,7 +35,7 @@ test("renders the Broker directory and non-destructive filters", async ({ page }
   ).toBeVisible();
 
   const meridianRow = table.getByRole("row").filter({
-    has: table.getByText("Meridian Auto Freight", { exact: true }),
+    hasText: "Meridian Auto Freight",
   });
   await expect(meridianRow).toBeVisible();
   await expect(meridianRow.getByText("MC: MC-812340", { exact: true })).toBeVisible();
@@ -65,8 +65,7 @@ test("renders the Broker directory and non-destructive filters", async ({ page }
     table.getByText("Meridian Auto Freight", { exact: true }),
   ).toBeVisible();
 
-  const firstViewButton = page.getByRole("button", { name: "VIEW" }).first();
-  await firstViewButton.click();
+  await meridianRow.getByRole("button", { name: "VIEW" }).click();
   await expect(
     page.getByText("Meridian Auto Freight", { exact: true }).last(),
   ).toBeVisible();
