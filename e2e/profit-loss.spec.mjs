@@ -37,11 +37,13 @@ test.describe("Profit and loss", () => {
     await expect(page.getByText("Net Profit", { exact: true })).toBeVisible();
 
     const revenueBreakdown = page
-      .getByRole("heading", { name: "Revenue Breakdown" })
-      .locator("xpath=ancestor::section");
+      .locator("section:visible")
+      .filter({ hasText: "Revenue Breakdown" })
+      .first();
     const expenseBreakdown = page
-      .getByRole("heading", { name: "Expense Breakdown" })
-      .locator("xpath=ancestor::section");
+      .locator("section:visible")
+      .filter({ hasText: "Expense Breakdown" })
+      .first();
 
     await expect(revenueBreakdown).toBeVisible();
     await expect(expenseBreakdown).toBeVisible();
@@ -81,10 +83,10 @@ test.describe("Profit and loss", () => {
       page.getByRole("heading", { name: "PROFIT & LOSS", level: 1 }),
     ).toBeVisible();
     await expect(
-      page.getByRole("heading", { name: "Revenue Breakdown" }),
+      page.getByRole("heading", { name: "Revenue Breakdown" }).filter({ visible: true }),
     ).toBeVisible();
     await expect(
-      page.getByRole("heading", { name: "Expense Breakdown" }),
+      page.getByRole("heading", { name: "Expense Breakdown" }).filter({ visible: true }),
     ).toBeVisible();
     await expect(
       page.getByRole("button", { name: "Export CSV" }),
