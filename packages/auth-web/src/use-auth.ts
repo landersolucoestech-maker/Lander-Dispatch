@@ -21,12 +21,27 @@ interface ErrorEnvelope {
   error?: string;
 }
 
+const isStaticPreview = import.meta.env.PROD && import.meta.env.BASE_URL !== '/';
+
+const previewUser = {
+  id: 'frontend-preview',
+  email: 'preview@landerdispatch.local',
+  name: 'Lander Dispatch',
+} as AuthUser;
+
+function appPath(path: string): string {
+  const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+  return `${base}${path}` || path;
+}
+
 export function useAuth(): AuthState {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<AuthUser | null>(isStaticPreview ? previewUser : null);
+  const [isLoading, setIsLoading] = useState(!isStaticPreview);
   const [sessionError, setSessionError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (isStaticPreview) return;
+
     let cancelled = false;
 
     fetch('/api/auth/user', { credentials: 'include' })
@@ -55,6 +70,12 @@ export function useAuth(): AuthState {
   }, []);
 
   const login = useCallback(async ({ email, password }: LoginCredentials) => {
+    if (isStaticPreview) {
+      setUser(previewUser);
+      window.location.assign(appPath('/dashboard'));
+      return;
+    }
+
     const response = await fetch('/api/auth/login', {
       method: 'POST',
       credentials: 'include',
@@ -74,16 +95,22 @@ export function useAuth(): AuthState {
       );
     }
 
-    window.location.assign('/dashboard');
+    window.location.assign(appPath('/dashboard'));
   }, []);
 
   const logout = useCallback(async () => {
+    if (isStaticPreview) {
+      setUser(previewUser);
+      window.location.assign(appPath('/dashboard'));
+      return;
+    }
+
     await fetch('/api/auth/logout', {
       method: 'POST',
       credentials: 'include',
     }).catch(() => undefined);
 
-    window.location.assign('/login');
+    window.location.assign(appPath('/login'));
   }, []);
 
   return {
