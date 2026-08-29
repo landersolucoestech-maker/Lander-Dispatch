@@ -41,9 +41,9 @@
   --color-sidebar-accent: hsl(var(--sidebar-accent));
   --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
   --color-sidebar-ring: hsl(var(--sidebar-ring));
-  --font-sans: var(--app-font-sans);
-  --font-serif: var(--app-font-sans);
-  --font-mono: var(--app-font-sans);
+  --font-sans: var(--app-font-ui);
+  --font-serif: var(--app-font-ui);
+  --font-mono: var(--app-font-ui);
   --radius-sm: calc(var(--radius) - 2px);
   --radius-md: var(--radius);
   --radius-lg: calc(var(--radius) + 2px);
@@ -85,57 +85,74 @@
   --chart-3: 215 16% 34%;
   --chart-4: 0 0% 85%;
   --chart-5: 219 58% 46%;
-  --app-font-sans: 'Korolev', 'Arial Narrow', Arial, sans-serif;
+
+  --app-font-brand: 'Korolev', 'Arial Narrow', Arial, sans-serif;
+  --app-font-ui: Arial, Helvetica, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --radius: 0.55rem;
 }
 
 @layer base {
   * {
     @apply border-border;
-    font-family: var(--app-font-sans);
   }
 
-  html {
+  html,
+  body {
     background: #ffffff;
-    font-family: var(--app-font-sans);
+    font-family: var(--app-font-ui);
   }
 
-  body,
+  body {
+    @apply antialiased bg-background text-foreground;
+    min-width: 320px;
+    font-size: 14px;
+    line-height: 1.5;
+    font-weight: 400;
+  }
+
   button,
   input,
   select,
   textarea,
   table,
   th,
-  td {
-    font-family: var(--app-font-sans) !important;
+  td,
+  p,
+  span,
+  label {
+    font-family: var(--app-font-ui);
   }
 
-  body {
-    @apply antialiased bg-background text-foreground;
-    min-width: 320px;
-    font-weight: 400;
-  }
-
-  h1, h2, h3, h4, h5, h6 {
-    font-family: var(--app-font-sans) !important;
+  h1,
+  h2 {
+    font-family: var(--app-font-brand);
     font-weight: 600;
     letter-spacing: -0.01em;
   }
 
-  p,
-  span,
-  label,
-  td,
-  th,
-  input,
-  textarea,
-  select {
-    font-weight: 400;
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--app-font-ui);
+    font-weight: 600;
+    letter-spacing: -0.005em;
   }
 
-  code, pre, kbd, samp {
-    font-family: var(--app-font-sans) !important;
+  input,
+  textarea,
+  select,
+  td,
+  th {
+    font-size: 0.875rem;
+    line-height: 1.45;
+  }
+
+  code,
+  pre,
+  kbd,
+  samp {
+    font-family: var(--app-font-ui);
   }
 
   ::selection {
@@ -144,26 +161,51 @@
 }
 
 @layer utilities {
+  .text-xs {
+    line-height: 1.45;
+  }
+
   .text-xs.font-bold,
-  .text-xs.font-semibold {
-    font-weight: 500 !important;
-  }
-
+  .text-xs.font-semibold,
   .text-xs.font-medium,
-  [class*="text-[10px]"][class*="font-bold"],
-  [class*="text-[10px]"][class*="font-semibold"],
-  [class*="text-[11px]"][class*="font-bold"],
-  [class*="text-[11px]"][class*="font-semibold"] {
-    font-weight: 400 !important;
-  }
-
   .text-sm.font-bold,
   .text-sm.font-semibold {
     font-weight: 500 !important;
   }
+
+  [class*="text-[10px]"],
+  [class*="text-[11px]"] {
+    font-family: var(--app-font-ui) !important;
+    font-weight: 400 !important;
+    letter-spacing: 0 !important;
+    line-height: 1.4 !important;
+  }
+
+  .font-mono {
+    font-family: var(--app-font-ui) !important;
+  }
+
+  .font-black {
+    font-weight: 700;
+  }
+
+  .font-bold {
+    font-weight: 600;
+  }
+
+  .font-semibold {
+    font-weight: 500;
+  }
 }
 
 @layer components {
+  .lander-brand-type,
+  .lander-brand-name {
+    font-family: var(--app-font-brand) !important;
+    font-weight: 600;
+    letter-spacing: 0.015em;
+  }
+
   .lander-surface {
     @apply rounded-xl border border-border bg-white shadow-sm;
     box-shadow: 0 1px 2px rgba(11, 30, 54, 0.04), 0 8px 24px rgba(11, 30, 54, 0.035);
