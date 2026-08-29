@@ -219,12 +219,12 @@
   main[data-module="audit-log"] > div > header,
   main[data-module="carriers"] > div > div:first-child,
   main[data-module="brokers"] > div > div:first-child {
-    display: none;
+    display: none !important;
   }
 
   main[data-module="profit-loss"] > div > header > div:first-child,
   main[data-module="reports"] > div > header > div:first-child {
-    display: none;
+    display: none !important;
   }
 
   main[data-module="profit-loss"] > div > header,
