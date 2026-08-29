@@ -61,18 +61,37 @@ function getPageLabel(location: string) {
   );
 }
 
-function Navigation({
-  location,
-  onNavigate,
-}: {
-  location: string;
-  onNavigate: () => void;
-}) {
+function Brand({ compact = false }: { compact?: boolean }) {
+  return (
+    <div className="flex min-w-0 items-center gap-3">
+      <span className="lander-brand-mark relative flex h-10 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg text-sm font-black italic text-white">
+        LD
+        <span className="absolute bottom-1 left-2 h-0.5 w-7 -skew-x-[28deg] bg-white/75" />
+      </span>
+      {!compact ? (
+        <div className="min-w-0 leading-none">
+          <p className="truncate text-[15px] font-extrabold tracking-[0.02em] text-[#0B1E36]">
+            LANDER
+          </p>
+          <div className="mt-1 flex items-center gap-1.5">
+            <span className="h-px w-4 bg-[#1E3D7A]" />
+            <p className="text-[10px] font-bold tracking-[0.24em] text-[#1E3D7A]">
+              DISPATCH
+            </p>
+            <span className="h-px w-4 bg-[#1E3D7A]" />
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function Navigation({ location, onNavigate }: { location: string; onNavigate: () => void }) {
   const isActive = (href: string, exact = false) =>
     exact ? location === href : location.startsWith(href);
 
   return (
-    <nav className="flex flex-col gap-1 px-3 py-4">
+    <nav className="flex flex-col gap-1 px-3 py-5">
       {NAV_ITEMS.map((item) => {
         const Icon = item.icon;
         const active = item.sub
@@ -85,36 +104,31 @@ function Navigation({
               href={item.href}
               onClick={onNavigate}
               className={cn(
-                "flex min-h-10 items-center gap-3 px-3 text-sm font-medium transition-colors",
+                "flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-all",
                 active
-                  ? "bg-blue-600 text-white"
-                  : "text-slate-300 hover:bg-white/10 hover:text-white",
+                  ? "bg-[#edf3ff] font-semibold text-[#1E3D7A] shadow-[inset_3px_0_0_#1E3D7A]"
+                  : "text-slate-600 hover:bg-slate-50 hover:text-[#0B1E36]",
               )}
             >
-              <Icon className="h-4 w-4 shrink-0" />
+              <Icon className={cn("h-[18px] w-[18px] shrink-0", active ? "text-[#1E3D7A]" : "text-slate-500")} />
               <span className="min-w-0 flex-1 truncate">{item.label}</span>
               {item.sub ? (
-                <ChevronDown
-                  className={cn(
-                    "h-4 w-4 shrink-0 transition-transform",
-                    active && "rotate-180",
-                  )}
-                />
+                <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", active && "rotate-180")} />
               ) : null}
             </Link>
 
             {item.sub && active ? (
-              <div className="ml-5 flex flex-col border-l border-slate-700 py-1 pl-5">
+              <div className="ml-6 flex flex-col border-l border-slate-200 py-1 pl-4">
                 {item.sub.map((subItem) => (
                   <Link
                     key={subItem.href}
                     href={subItem.href}
                     onClick={onNavigate}
                     className={cn(
-                      "py-2 text-sm transition-colors",
+                      "rounded-md px-2 py-2 text-sm transition-colors",
                       isActive(subItem.href, true)
-                        ? "font-semibold text-blue-300"
-                        : "text-slate-400 hover:text-white",
+                        ? "bg-blue-50 font-semibold text-[#1E3D7A]"
+                        : "text-slate-500 hover:bg-slate-50 hover:text-[#0B1E36]",
                     )}
                   >
                     {subItem.label}
@@ -129,35 +143,21 @@ function Navigation({
   );
 }
 
-function SidebarContent({
-  location,
-  onNavigate,
-}: {
-  location: string;
-  onNavigate: () => void;
-}) {
+function SidebarContent({ location, onNavigate }: { location: string; onNavigate: () => void }) {
   const { user, logout } = useAuth();
-  const initials = `${user?.firstName?.[0] ?? ""}${user?.lastName?.[0] ?? ""}` || "LD";
+  const initials = `${user?.firstName?.[0] ?? ""}${user?.lastName?.[0] ?? ""}` || "OP";
   const localMode = user?.email === "auth-disabled@localhost";
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-slate-950 text-white">
-      <div className="flex h-16 shrink-0 items-center border-b border-white/10 px-5">
-        <Link href="/dashboard" onClick={onNavigate} className="flex min-w-0 items-center gap-3">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center bg-blue-600 text-xs font-black tracking-tight">
-            LD
-          </span>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-bold tracking-tight">LANDER DISPATCH</p>
-            <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">
-              Operations Platform
-            </p>
-          </div>
+    <div className="flex h-full min-h-0 flex-col bg-white text-[#0B1E36]">
+      <div className="flex h-20 shrink-0 items-center border-b border-slate-200 px-5">
+        <Link href="/dashboard" onClick={onNavigate} className="min-w-0">
+          <Brand />
         </Link>
       </div>
 
       {localMode ? (
-        <div className="mx-3 mt-3 border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-amber-200">
+        <div className="mx-3 mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
           Local development mode
         </div>
       ) : null}
@@ -166,28 +166,30 @@ function SidebarContent({
         <Navigation location={location} onNavigate={onNavigate} />
       </div>
 
-      <div className="shrink-0 border-t border-white/10 p-4">
-        <div className="flex items-center gap-3 px-1">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center border border-white/15 bg-white/10 text-xs font-bold uppercase">
-            {initials}
+      <div className="shrink-0 border-t border-slate-200 p-4">
+        <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1E3D7A] text-xs font-bold uppercase text-white">
+              {initials}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-[#0B1E36]">
+                {[user?.firstName, user?.lastName].filter(Boolean).join(" ") || "Operator"}
+              </p>
+              <p className="truncate text-[11px] text-slate-500">
+                {localMode ? "Local Owner" : "Administrator"}
+              </p>
+            </div>
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-xs font-semibold">
-              {[user?.firstName, user?.lastName].filter(Boolean).join(" ") || "Operator"}
-            </p>
-            <p className="truncate text-[10px] uppercase tracking-wide text-slate-400">
-              {localMode ? "Local Owner" : "Authenticated User"}
-            </p>
-          </div>
+          <button
+            type="button"
+            onClick={() => void logout()}
+            className="mt-3 flex min-h-10 w-full items-center gap-2 rounded-lg border-t border-slate-200 px-1 pt-3 text-sm font-medium text-slate-600 transition-colors hover:text-red-600"
+          >
+            <LogOut className="h-4 w-4" />
+            Sign Out
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={() => void logout()}
-          className="mt-4 flex min-h-10 w-full items-center gap-2 px-3 text-sm font-medium text-slate-300 transition-colors hover:bg-red-500/10 hover:text-red-300"
-        >
-          <LogOut className="h-4 w-4" />
-          Sign Out
-        </button>
       </div>
     </div>
   );
@@ -217,8 +219,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="flex min-h-[100dvh] w-full bg-background text-foreground">
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 border-r border-slate-800 lg:block">
+    <div className="lander-page-bg flex min-h-[100dvh] w-full text-foreground">
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 border-r border-slate-200 bg-white shadow-[4px_0_18px_rgba(11,30,54,0.025)] lg:block">
         <SidebarContent location={location} onNavigate={() => undefined} />
       </aside>
 
@@ -226,14 +228,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <div className="fixed inset-0 z-50 lg:hidden">
           <button
             type="button"
-            className="absolute inset-0 bg-slate-950/70"
+            className="absolute inset-0 bg-[#0B1E36]/35 backdrop-blur-[1px]"
             aria-label="Close navigation"
             onClick={() => setMobileOpen(false)}
           />
-          <aside className="relative h-full w-[min(19rem,88vw)] border-r border-slate-800 shadow-2xl">
+          <aside className="relative h-full w-[min(19rem,88vw)] border-r border-slate-200 bg-white shadow-2xl">
             <button
               type="button"
-              className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center border border-white/15 bg-white/10 text-white"
+              className="absolute right-3 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm"
               aria-label="Close navigation"
               onClick={() => setMobileOpen(false)}
             >
@@ -245,10 +247,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
       ) : null}
 
       <div className="flex min-w-0 flex-1 flex-col lg:pl-64">
-        <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-3 border-b border-border bg-background/95 px-4 backdrop-blur sm:px-6 lg:px-8">
+        <header className="sticky top-0 z-30 flex h-20 shrink-0 items-center gap-4 border-b border-slate-200 bg-white/95 px-4 shadow-[0_1px_8px_rgba(11,30,54,0.025)] backdrop-blur sm:px-6 lg:px-8">
           <button
             type="button"
-            className="flex h-9 w-9 shrink-0 items-center justify-center border border-border lg:hidden"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm lg:hidden"
             aria-label="Open navigation"
             onClick={() => setMobileOpen(true)}
           >
@@ -256,19 +258,19 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </button>
 
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">{pageLabel}</p>
-            <p className="hidden text-xs text-muted-foreground sm:block">
-              Lander Dispatch operational workspace
+            <p className="truncate text-base font-bold text-[#0B1E36]">{pageLabel}</p>
+            <p className="hidden text-xs text-slate-500 sm:block">
+              Smart dispatch. Stronger miles.
             </p>
           </div>
 
           <form className="relative hidden w-full max-w-sm md:block" onSubmit={handleQuickSearch}>
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
               value={quickSearch}
               onChange={(event) => setQuickSearch(event.target.value)}
-              placeholder="Navigate to a module…"
-              className="h-9 w-full border border-border bg-background pl-9 pr-3 text-sm outline-none transition focus:border-primary"
+              placeholder="Search modules…"
+              className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50/70 pl-9 pr-3 text-sm text-[#0B1E36] outline-none transition focus:border-[#1E3D7A] focus:bg-white focus:ring-2 focus:ring-blue-100"
               aria-label="Quick module navigation"
             />
           </form>
