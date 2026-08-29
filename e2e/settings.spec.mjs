@@ -1,5 +1,16 @@
 import { expect, test } from "./playwright.mjs";
 
+async function expectInputValue(page, value) {
+  await expect
+    .poll(() =>
+      page.locator("input").evaluateAll(
+        (inputs, expected) => inputs.some((input) => input.value === expected),
+        value,
+      ),
+    )
+    .toBe(true);
+}
+
 test("loads company settings and enforces non-destructive form validation", async ({
   page,
 }) => {
@@ -28,22 +39,16 @@ test("loads company settings and enforces non-destructive form validation", asyn
     page.getByRole("heading", { name: "Company Address" }),
   ).toBeVisible();
 
-  await expect(page.getByDisplayValue("Lander Dispatch")).toBeVisible();
-  await expect(
-    page.getByDisplayValue("Lander Dispatch Services LLC"),
-  ).toBeVisible();
-  await expect(page.getByDisplayValue("88-1047296")).toBeVisible();
-  await expect(page.getByDisplayValue("MC-1548207")).toBeVisible();
-  await expect(page.getByDisplayValue("USDOT-4027815")).toBeVisible();
-  await expect(
-    page.getByDisplayValue("operations@landerdispatch.test"),
-  ).toBeVisible();
-  await expect(
-    page.getByDisplayValue("6900 Tavistock Lakes Blvd"),
-  ).toBeVisible();
-  await expect(page.getByDisplayValue("Orlando")).toBeVisible();
-  await expect(page.getByDisplayValue("FL")).toBeVisible();
-  await expect(page.getByDisplayValue("32827")).toBeVisible();
+  await expectInputValue(page, "Lander Dispatch");
+  await expectInputValue(page, "Lander Dispatch Services LLC");
+  await expectInputValue(page, "88-1047296");
+  await expectInputValue(page, "MC-1548207");
+  await expectInputValue(page, "USDOT-4027815");
+  await expectInputValue(page, "operations@landerdispatch.test");
+  await expectInputValue(page, "6900 Tavistock Lakes Blvd");
+  await expectInputValue(page, "Orlando");
+  await expectInputValue(page, "FL");
+  await expectInputValue(page, "32827");
 
   const saveButton = page.getByRole("button", { name: "Save Changes" });
   await expect(saveButton).toBeDisabled();
@@ -66,8 +71,6 @@ test("loads company settings and enforces non-destructive form validation", asyn
   await expect(saveButton).toBeEnabled();
 
   await page.reload();
-  await expect(
-    page.getByDisplayValue("operations@landerdispatch.test"),
-  ).toBeVisible();
+  await expectInputValue(page, "operations@landerdispatch.test");
   await expect(saveButton).toBeDisabled();
 });
