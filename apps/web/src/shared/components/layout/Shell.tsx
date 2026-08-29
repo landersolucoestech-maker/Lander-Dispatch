@@ -12,7 +12,6 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
-  Search,
   Settings,
   Truck,
   Users,
@@ -196,27 +195,9 @@ function SidebarContent({ location, onNavigate }: { location: string; onNavigate
 }
 
 export function Shell({ children }: { children: React.ReactNode }) {
-  const [location, navigate] = useLocation();
+  const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [quickSearch, setQuickSearch] = useState("");
   const pageLabel = useMemo(() => getPageLabel(location), [location]);
-
-  const handleQuickSearch = (event: React.FormEvent) => {
-    event.preventDefault();
-    const value = quickSearch.trim().toLowerCase();
-    if (!value) return;
-
-    const match = NAV_ITEMS.flatMap((item) => [
-      { href: item.href, label: item.label },
-      ...(item.sub ?? []),
-    ]).find((item) => item.label.toLowerCase().includes(value));
-
-    if (match) {
-      navigate(match.href);
-      setQuickSearch("");
-      setMobileOpen(false);
-    }
-  };
 
   return (
     <div className="lander-page-bg flex min-h-[100dvh] w-full text-foreground">
@@ -263,17 +244,6 @@ export function Shell({ children }: { children: React.ReactNode }) {
               Smart dispatch. Stronger miles.
             </p>
           </div>
-
-          <form className="relative hidden w-full max-w-sm md:block" onSubmit={handleQuickSearch}>
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input
-              value={quickSearch}
-              onChange={(event) => setQuickSearch(event.target.value)}
-              placeholder="Search modules…"
-              className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50/70 pl-9 pr-3 text-sm text-[#0B1E36] outline-none transition focus:border-[#1E3D7A] focus:bg-white focus:ring-2 focus:ring-blue-100"
-              aria-label="Quick module navigation"
-            />
-          </form>
         </header>
 
         <main className="flex min-h-0 flex-1 flex-col overflow-hidden">{children}</main>
