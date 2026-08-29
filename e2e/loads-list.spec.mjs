@@ -18,11 +18,12 @@ test.describe("Loads list", () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/loads");
 
+    const header = page.getByRole("banner");
     await expect(
-      page.getByRole("heading", { name: "LOADS", level: 1 }),
+      header.getByRole("heading", { name: "LOADS", level: 1 }),
     ).toBeVisible();
     await expect(
-      page.getByText("Active and historical freight operations.", {
+      header.getByText("Active and historical freight operations.", {
         exact: true,
       }),
     ).toBeVisible();
