@@ -18,11 +18,12 @@ test.describe("Transactions list", () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto("/accounting/transactions");
 
+    const header = page.getByRole("banner");
     await expect(
-      page.getByRole("heading", { name: "TRANSACTIONS", level: 1 }),
+      header.getByRole("heading", { name: "TRANSACTIONS", level: 1 }),
     ).toBeVisible();
     await expect(
-      page.getByText("Income, expenses and general-ledger activity.", {
+      header.getByText("Income, expenses and general-ledger activity.", {
         exact: true,
       }),
     ).toBeVisible();
