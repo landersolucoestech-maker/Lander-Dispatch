@@ -416,7 +416,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 }}
                 className="relative flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-[#1E3D7A]"
               >
-                <Bell className="h-[18px] w-[18px] />
+                <Bell className="h-[18px] w-[18px]" />
               </button>
 
               {notificationsOpen ? (
