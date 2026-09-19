@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import { usePersistentState } from "@/shared/hooks/usePersistentState";
 
 export type MarketingBriefing = {
@@ -12,9 +13,64 @@ export type MarketingContent = {
   publishDate:string; publishTime:string; owner:string; copy:string; notes:string; campaignId?:string; hashtags?:string; location?:string;
   integratedAccountId?:string; mediaName?:string; mediaUrl?:string;
 };
-export type MarketingState = { briefings:MarketingBriefing[]; campaigns:MarketingCampaign[]; contents:MarketingContent[]; aiHistory:Array<{id:string;kind:string;prompt:string;output:string;createdAt:string}> };
-const INITIAL: MarketingState = { briefings:[], campaigns:[], contents:[], aiHistory:[] };
-export function useMarketingState(){ return usePersistentState<MarketingState>("lander:marketing-state", INITIAL); }
+
+export type MarketingTaskStatus = "Backlog" | "Planned" | "In Progress" | "In Review" | "Blocked" | "Completed";
+export type MarketingTaskPriority = "Low" | "Medium" | "High" | "Urgent";
+export type MarketingTaskApproval = "Not Required" | "Pending" | "Approved" | "Changes Requested";
+export type MarketingTask = {
+  id:string;
+  title:string;
+  workstream:string;
+  status:MarketingTaskStatus;
+  priority:MarketingTaskPriority;
+  owner:string;
+  reviewer:string;
+  deadline:string;
+  description:string;
+  deliverable:string;
+  campaignId:string;
+  briefingId:string;
+  contentId:string;
+  channels:string[];
+  approval:MarketingTaskApproval;
+  referenceUrl:string;
+  checklist:Array<{id:string;label:string;done:boolean}>;
+};
+
+export type MarketingState = {
+  briefings:MarketingBriefing[];
+  campaigns:MarketingCampaign[];
+  contents:MarketingContent[];
+  tasks:MarketingTask[];
+  aiHistory:Array<{id:string;kind:string;prompt:string;output:string;createdAt:string}>;
+};
+
+const INITIAL: MarketingState = { briefings:[], campaigns:[], contents:[], tasks:[], aiHistory:[] };
+
+function normalizeMarketingState(value: MarketingState): MarketingState {
+  const current = value ?? INITIAL;
+  return {
+    ...INITIAL,
+    ...current,
+    briefings: current.briefings ?? [],
+    campaigns: current.campaigns ?? [],
+    contents: current.contents ?? [],
+    tasks: current.tasks ?? [],
+    aiHistory: current.aiHistory ?? [],
+  };
+}
+
+export function useMarketingState(){
+  const [stored,setStored]=usePersistentState<MarketingState>("lander:marketing-state", INITIAL);
+  const state=normalizeMarketingState(stored);
+  const setState=useCallback((next:MarketingState|((current:MarketingState)=>MarketingState))=>{
+    setStored(current=>{
+      const normalized=normalizeMarketingState(current);
+      return normalizeMarketingState(typeof next==="function"?next(normalized):next);
+    });
+  },[setStored]);
+  return [state,setState] as const;
+}
 
 export const BRIEFING_TYPES=["Campaign","Content","Brand","Launch","Institutional","Other"];
 export const BRIEFING_STATUSES=["Draft","In Review","Approved","Completed"];
@@ -25,3 +81,7 @@ export const CONTENT_CHANNELS=["Instagram","Facebook","TikTok","YouTube","Google
 export const CONTENT_STATUSES=["Idea","Draft","In Review","Scheduled","Published","Cancelled"];
 export const APPROVAL_STATUSES=["Pending","Approved","Changes Requested"];
 export const TARGET_TYPES=["Company","Carrier","Broker","Customer","Load"];
+export const MARKETING_TASK_STATUSES:MarketingTaskStatus[]=["Backlog","Planned","In Progress","In Review","Blocked","Completed"];
+export const MARKETING_TASK_PRIORITIES:MarketingTaskPriority[]=["Low","Medium","High","Urgent"];
+export const MARKETING_TASK_APPROVALS:MarketingTaskApproval[]=["Not Required","Pending","Approved","Changes Requested"];
+export const MARKETING_WORKSTREAMS=["Strategy","Creative","Content","Social Media","Paid Media","Email","Website","Analytics","Approval","Other"];

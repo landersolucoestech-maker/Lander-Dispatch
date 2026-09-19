@@ -57,14 +57,14 @@ const TITLE_SOURCE_SELECTORS: Record<string, string> = {
 const HEADER_COPY: Record<string, { title: string; description: string }> = {
   agenda: { title: "AGENDA", description: "Events, appointments, follow-ups and operational scheduling." },
   chat: { title: "CHAT", description: "Internal Chat and Support Center." },
-  tasks: { title: "TASK", description: "Operational tasks, owners, priorities, deadlines and checklists." },
+  tasks: { title: "TASK", description: "Company-wide operational tasks for dispatch, loads, carriers, brokers, CRM, accounting and compliance." },
   "marketing-overview": { title: "MARKETING", description: "Overview of campaigns, content, approvals, deliveries and sector activity." },
   "marketing-briefing": { title: "BRIEFING", description: "Strategic briefs, objectives, audience, creative direction and deliverables." },
   "marketing-calendar": { title: "CALENDAR", description: "Content planning by date, channel, approval and publication status." },
   "marketing-campaigns": { title: "CAMPAIGNS", description: "Campaign planning, context, budget, audience, platforms and performance." },
   "marketing-ai": { title: "AI CREATIVE", description: "Ideas, profile, pitching, trends, analytics, planning and generation history." },
   "marketing-metrics": { title: "METRICS", description: "Marketing reach, impressions, clicks, conversions, spend and ROI." },
-  "marketing-tasks": { title: "MARKETING TASKS", description: "Marketing execution tasks, owners, priorities, deadlines and checklists." },
+  "marketing-tasks": { title: "MARKETING TASKS", description: "Campaign, content and creative execution with channels, reviewers, approvals and deliverables." },
   reports: { title: "REPORTS", description: "Operational and financial performance using live system data." },
   "audit-log": { title: "AUDIT LOG", description: "Read-only operational history for security, accountability and troubleshooting." },
   settings: { title: "SETTINGS", description: "Company, automations, security, integrations, billing and user access." },
@@ -100,7 +100,8 @@ function HeaderActions({ location, crmTab }: { location: string; crmTab: CrmTab 
   if (location === "/loads") return <div className="flex items-center gap-2"><button type="button" className={secondary} onClick={() => dispatch("lander:loads-import-pdf")}><FileText className="h-4 w-4" />Import PDF</button><button type="button" className={primary} onClick={() => dispatch("lander:loads-create")}><Plus className="h-4 w-4" />Create Load</button></div>;
   if (location === "/crm") return crmTab === "leads" ? <button type="button" className={primary} onClick={() => dispatch("lander:crm-create-lead")}><Plus className="h-4 w-4" />Create Lead</button> : <button type="button" className={primary} onClick={() => dispatch("lander:crm-create-contact")}><UserPlus className="h-4 w-4" />Create Contact</button>;
   if (location === "/agenda") return <button type="button" className={primary} onClick={() => dispatch("lander:agenda-create")}><Plus className="h-4 w-4" />New Event</button>;
-  if (location === "/tasks" || location === "/marketing/tasks") return <button type="button" className={primary} onClick={() => dispatch("lander:tasks-create")}><Plus className="h-4 w-4" />New Task</button>;
+  if (location === "/tasks") return <button type="button" className={primary} onClick={() => dispatch("lander:tasks-create")}><Plus className="h-4 w-4" />New Task</button>;
+  if (location === "/marketing/tasks") return <button type="button" className={primary} onClick={() => dispatch("lander:marketing-tasks-create")}><Plus className="h-4 w-4" />New Marketing Task</button>;
   if (location === "/carriers") return <button type="button" className={primary} onClick={() => dispatch("lander:carriers-add")}><Plus className="h-4 w-4" />Add Carrier</button>;
   if (location === "/brokers") return <button type="button" className={primary} onClick={() => dispatch("lander:brokers-add")}><Plus className="h-4 w-4" />Add Broker</button>;
   if (location === "/documents") return <button type="button" className={primary} onClick={() => dispatch("lander:documents-upload")}><Upload className="h-4 w-4" />Upload Document</button>;
