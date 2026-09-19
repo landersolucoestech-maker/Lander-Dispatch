@@ -38,6 +38,18 @@ export function createMockSettingsData() {
       { id: "mock-user-accounting", name: "Sophia Bennett", email: "sophia@landerdispatch.example", role: "Accounting", status: "Active" },
       { id: "mock-user-marketing", name: "Maya Collins", email: "maya@landerdispatch.example", role: "Marketing", status: "Pending" },
     ],
+    billing: {
+      planName: "Lander Dispatch Pro",
+      status: "Active",
+      billingCycle: "Monthly",
+      nextRenewal: "2026-10-19",
+      paymentMethod: { brand: "Visa", last4: "4821", expiration: "08/29" },
+      invoices: [
+        { id: "mock-billing-001", date: "2026-09-19", amount: 249, status: "Paid", reference: "BILL-2026-09" },
+        { id: "mock-billing-002", date: "2026-08-19", amount: 249, status: "Paid", reference: "BILL-2026-08" },
+        { id: "mock-billing-003", date: "2026-07-19", amount: 249, status: "Paid", reference: "BILL-2026-07" },
+      ],
+    },
     roles: [
       { id: "owner", name: "Owner", description: "Full administrative access.", permissions: ["all"] },
       { id: "dispatcher", name: "Dispatcher", description: "Loads, CRM, agenda and carrier operations.", permissions: ["dashboard", "loads", "crm", "carriers", "agenda", "tasks"] },

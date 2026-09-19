@@ -63,6 +63,7 @@ export function bootstrapMockupData() {
   const settings = createMockSettingsData();
   seedObjectIfMissing("lander:settings:automations", settings.automations);
   seedObjectIfMissing("lander:settings:public", settings.publicRegistration);
+  seedObjectIfMissing("lander:settings:billing", settings.billing);
   mergeRecordStore("lander:settings:integrations", settings.integrations);
   mergeRecordStore("lander:settings:users", settings.users);
   mergeRecordStore("lander:settings:roles", settings.roles);
