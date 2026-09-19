@@ -1,3 +1,4 @@
+import { installMockApiFetch } from "./api";
 import { createMockAgendaEvents } from "./agenda";
 import { createMockInternalConversations, createMockSupportConversations } from "./chat";
 import { createMockMarketingState } from "./marketing";
@@ -39,6 +40,8 @@ function seedObjectIfMissing<T extends object>(key: string, mock: T) {
 export function bootstrapMockupData() {
   if (typeof window === "undefined") return;
   if (import.meta.env.VITE_MOCKUP_DATA !== "true") return;
+
+  installMockApiFetch();
 
   const marketing = createMockMarketingState();
   const existingMarketing = parsedValue<typeof marketing>("lander:marketing-state");
