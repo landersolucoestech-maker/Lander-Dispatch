@@ -1,4 +1,4 @@
-name: Prune legacy branches
+name: Prune non-default branches
 
 on:
   push:
@@ -14,85 +14,20 @@ jobs:
   prune:
     runs-on: ubuntu-latest
     steps:
-      - name: Keep only dev
+      - name: Delete every non-default legacy ref
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
-          CANONICAL_SHA: ${{ github.sha }}
         shell: bash
         run: |
           set -Eeuo pipefail
           api="https://api.github.com/repos/$REPO"
           auth=(-H "Accept: application/vnd.github+json" -H "Authorization: Bearer $GH_TOKEN" -H "X-GitHub-Api-Version: 2026-03-10")
-
-          request() {
-            local method="$1" url="$2" data="${3:-}"
-            if [[ -n "$data" ]]; then
-              curl -sS -L -o /tmp/response.json -w "%{http_code}" -X "$method" "${auth[@]}" "$url" -d "$data"
-            else
-              curl -sS -L -o /tmp/response.json -w "%{http_code}" -X "$method" "${auth[@]}" "$url"
-            fi
-          }
-
-          echo "Canonical dev commit: $CANONICAL_SHA"
-
-          # Safest route: ask GitHub to make dev the default branch directly.
-          code="$(request PATCH "$api" '{"default_branch":"dev"}')"
-          echo "PATCH default_branch -> HTTP $code"
-
-          if [[ "$code" == "200" ]]; then
-            for branch in dev-pages-test __noop__ staging main; do
-              code="$(request DELETE "$api/git/refs/heads/$branch")"
-              echo "DELETE $branch -> HTTP $code"
-              if [[ "$code" != "204" && "$code" != "422" ]]; then
-                cat /tmp/response.json || true
-                exit 1
-              fi
-            done
-            exit 0
-          fi
-
-          cat /tmp/response.json || true
-          echo "Direct default-branch update denied; trying default-branch rename with rollback."
-
-          # Rename canonical dev out of the way, then rename default main to dev.
-          code="$(request POST "$api/branches/dev/rename" '{"new_name":"__canonical_dev_tmp__"}')"
-          echo "RENAME dev -> __canonical_dev_tmp__ -> HTTP $code"
-          if [[ "$code" != "201" ]]; then
-            cat /tmp/response.json || true
-            exit 2
-          fi
-
-          code="$(request POST "$api/branches/main/rename" '{"new_name":"dev"}')"
-          echo "RENAME main -> dev -> HTTP $code"
-          if [[ "$code" != "201" ]]; then
-            cat /tmp/response.json || true
-            rollback="$(request POST "$api/branches/__canonical_dev_tmp__/rename" '{"new_name":"dev"}')"
-            echo "ROLLBACK __canonical_dev_tmp__ -> dev -> HTTP $rollback"
-            [[ "$rollback" == "201" ]] || { cat /tmp/response.json || true; exit 99; }
-            exit 3
-          fi
-
-          # main was the default branch, so its rename makes dev the default.
-          # Point the new default dev back to the canonical commit from this run.
-          code="$(request PATCH "$api/git/refs/heads/dev" "{\"sha\":\"$CANONICAL_SHA\",\"force\":true}")"
-          echo "RESTORE canonical SHA on dev -> HTTP $code"
-          if [[ "$code" != "200" ]]; then
-            cat /tmp/response.json || true
-            rb1="$(request POST "$api/branches/dev/rename" '{"new_name":"main"}')"
-            echo "ROLLBACK dev -> main -> HTTP $rb1"
-            rb2="$(request POST "$api/branches/__canonical_dev_tmp__/rename" '{"new_name":"dev"}')"
-            echo "ROLLBACK tmp -> dev -> HTTP $rb2"
-            [[ "$rb1" == "201" && "$rb2" == "201" ]] || exit 98
-            exit 4
-          fi
-
-          code="$(request DELETE "$api/git/refs/heads/__canonical_dev_tmp__")"
-          echo "DELETE temporary canonical ref -> HTTP $code"
-          [[ "$code" == "204" ]] || { cat /tmp/response.json || true; exit 5; }
-
-          for branch in dev-pages-test __noop__ staging; do
-            code="$(request DELETE "$api/git/refs/heads/$branch")"
+          for branch in dev-pages-test __noop__ staging __canonical_dev_tmp__; do
+            code="$(curl -sS -L -o /tmp/response.json -w "%{http_code}" -X DELETE "${auth[@]}" "$api/git/refs/heads/$branch")"
             echo "DELETE $branch -> HTTP $code"
-            [[ "$code" == "204" || "$code" == "422" ]] || { cat /tmp/response.json || true; exit 6; }
+            if [[ "$code" != "204" && "$code" != "422" ]]; then
+              cat /tmp/response.json || true
+              exit 1
+            fi
           done
