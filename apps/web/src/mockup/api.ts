@@ -68,9 +68,12 @@ function paginate<T>(items: T[], url: URL) {
 
 function filtered<T extends Record<string, unknown>>(items: T[], url: URL) {
   const search = (url.searchParams.get("search") ?? "").trim().toLowerCase();
-  const status = (url.searchParams.get("status") ?? "").trim().toLowerCase();
+  const directFilters = ["status","category","action","entityType","contactType","pipelineStage","leadType","type"];
   return items.filter((item) => {
-    if (status && String(item.status ?? "").toLowerCase() !== status) return false;
+    for (const key of directFilters) {
+      const expected=(url.searchParams.get(key)??"").trim().toLowerCase();
+      if(expected && String(item[key]??"").toLowerCase()!==expected) return false;
+    }
     if (!search) return true;
     return Object.values(item).some((value) => typeof value === "string" && value.toLowerCase().includes(search));
   });
@@ -82,7 +85,7 @@ function idFor(prefix: string) {
 
 function recordAudit(state: MockApiState, action: string, entityType: string, entityId: string | null, summary: string) {
   state.auditLogs.unshift({
-    id:idFor("audit"),actorId:"frontend-preview",actorEmail:"preview@landerdispatch.local",action,entityType,entityId,summary,metadata:null,createdAt:new Date().toISOString()
+    id:idFor("audit"),actorId:"frontend-preview",actorEmail:"preview@landerdispatch.local",action,entityType,entityId:entityId??"",summary,metadata:null,createdAt:new Date().toISOString()
   });
 }
 
