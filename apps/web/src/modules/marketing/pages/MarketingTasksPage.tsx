@@ -142,7 +142,6 @@ export default function MarketingTasksPage(){
         <SelectTrigger className="w-48"><SelectValue placeholder="All campaigns"/></SelectTrigger>
         <SelectContent><SelectItem value="all">All campaigns</SelectItem>{state.campaigns.map(item=><SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>)}</SelectContent>
       </Select>
-      <Button onClick={()=>{setEditing(null);setFormOpen(true)}}><Plus className="mr-2 h-4 w-4"/>New Marketing Task</Button>
     </div>
 
     <MarketingSectionCard title="Marketing Execution Queue" description="Tasks tied to campaigns, briefings, content, channels, approvals and creative deliverables">
