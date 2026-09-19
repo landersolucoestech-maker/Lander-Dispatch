@@ -107,3 +107,39 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+  smoke-live:
+    name: Smoke deployed Pages
+    runs-on: ubuntu-latest
+    needs: deploy
+    steps:
+      - name: Checkout dev
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install live Pages browser smoke runtime
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          rm -rf /tmp/lander-live-playwright
+          mkdir -p /tmp/lander-live-playwright
+          cd /tmp/lander-live-playwright
+          npm init --yes >/dev/null
+          npm install --no-save --no-package-lock @playwright/test@1.61.1
+          ./node_modules/.bin/playwright install --with-deps chromium
+
+      - name: Verify deployed GitHub Pages in Chromium
+        shell: bash
+        env:
+          E2E_BASE_URL: https://landersolucoestech-maker.github.io
+          PLAYWRIGHT_PACKAGE_JSON: /tmp/lander-live-playwright/package.json
+          PAGES_PREVIEW_SMOKE: "true"
+        run: |
+          set -Eeuo pipefail
+          /tmp/lander-live-playwright/node_modules/.bin/playwright test \
+            e2e/pages-preview.spec.mjs \
+            --config ./playwright.config.mjs
