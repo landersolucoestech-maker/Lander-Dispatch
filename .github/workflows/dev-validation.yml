@@ -178,6 +178,46 @@ jobs:
           npm install --no-save --no-package-lock @playwright/test@1.61.1
           ./node_modules/.bin/playwright install --with-deps chromium
 
+      - name: Build GitHub Pages mockup bundle
+        if: github.event_name == 'push' && github.ref_name == 'dev'
+        env:
+          BASE_PATH: /Lander-Dispatch/
+          VITE_MOCKUP_DATA: "true"
+        run: pnpm --filter @workspace/lander-dispatch build
+
+      - name: Start GitHub Pages mockup preview
+        if: github.event_name == 'push' && github.ref_name == 'dev'
+        shell: bash
+        env:
+          PORT: 3001
+          BASE_PATH: /Lander-Dispatch/
+        run: |
+          set -Eeuo pipefail
+          : > /tmp/lander-pages-preview.log
+          nohup pnpm --filter @workspace/lander-dispatch serve > /tmp/lander-pages-preview.log 2>&1 &
+          echo $! > /tmp/lander-pages-preview.pid
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:3001/Lander-Dispatch/ >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/lander-pages-preview.log
+          exit 1
+
+      - name: Run GitHub Pages mockup browser smoke
+        if: github.event_name == 'push' && github.ref_name == 'dev'
+        shell: bash
+        env:
+          E2E_BASE_URL: http://127.0.0.1:3001
+          PLAYWRIGHT_PACKAGE_JSON: /tmp/lander-playwright/package.json
+          PAGES_PREVIEW_SMOKE: "true"
+        run: |
+          set -Eeuo pipefail
+          /tmp/lander-playwright/node_modules/.bin/playwright test \
+            e2e/pages-preview.spec.mjs \
+            --config ./playwright.config.mjs
+
       - name: Start web application for browser E2E
         if: github.event_name == 'push' && github.ref_name == 'dev'
         shell: bash
@@ -283,6 +323,9 @@ jobs:
         if: always()
         shell: bash
         run: |
+          if [ -f /tmp/lander-pages-preview.pid ]; then
+            kill "$(cat /tmp/lander-pages-preview.pid)" 2>/dev/null || true
+          fi
           if [ -f /tmp/lander-dispatch-web.pid ]; then
             kill "$(cat /tmp/lander-dispatch-web.pid)" 2>/dev/null || true
           fi
