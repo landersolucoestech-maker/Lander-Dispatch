@@ -40,6 +40,7 @@ jobs:
       - name: Build frontend for GitHub Pages
         env:
           BASE_PATH: /Lander-Dispatch/
+          VITE_MOCKUP_DATA: "true"
         run: pnpm --filter @workspace/lander-dispatch build
 
       - name: Add SPA fallback

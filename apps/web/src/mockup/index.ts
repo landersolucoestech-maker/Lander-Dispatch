@@ -1,0 +1,1 @@
+export { bootstrapMockupData } from "./bootstrap";
