@@ -5,7 +5,7 @@ import { createMockMarketingState } from "./marketing";
 import { createMockSettingsData } from "./settings";
 import { createMockOperationalTasks } from "./tasks";
 
-const MOCKUP_VERSION = "2026-09-19.2";
+const MOCKUP_VERSION = "2026-09-19.3";
 const VERSION_KEY = "lander:mockup-version";
 
 function parsedValue<T>(key: string): T | null {
@@ -37,11 +37,39 @@ function seedObjectIfMissing<T extends object>(key: string, mock: T) {
   writeValue(key, current && typeof current === "object" ? { ...mock, ...current } : mock);
 }
 
+function resetPreviewStateWhenVersionChanges() {
+  const currentVersion = window.localStorage.getItem(VERSION_KEY);
+  const forceReset = new URLSearchParams(window.location.search).get("mockReset") === "1";
+  if (currentVersion === MOCKUP_VERSION && !forceReset) return;
+
+  const keysToRemove: string[] = [];
+  for (let index = 0; index < window.localStorage.length; index += 1) {
+    const key = window.localStorage.key(index);
+    if (key?.startsWith("lander:")) keysToRemove.push(key);
+  }
+  keysToRemove.forEach((key) => window.localStorage.removeItem(key));
+}
+
+function clearLegacyBrowserCaches() {
+  if ("caches" in window) {
+    void window.caches.keys().then((keys) => Promise.all(keys.map((key) => window.caches.delete(key)))).catch(() => undefined);
+  }
+  if ("serviceWorker" in navigator) {
+    void navigator.serviceWorker.getRegistrations().then((registrations) => Promise.all(registrations.map((registration) => registration.unregister()))).catch(() => undefined);
+  }
+}
+
 export function bootstrapMockupData() {
   if (typeof window === "undefined") return;
   if (import.meta.env.VITE_MOCKUP_DATA !== "true") return;
 
-  installMockApiFetch();
+  try {
+    resetPreviewStateWhenVersionChanges();
+    clearLegacyBrowserCaches();
+    installMockApiFetch();
+  } catch (error) {
+    console.error("[mockup] preview reset failed", error);
+  }
 
   const marketing = createMockMarketingState();
   const existingMarketing = parsedValue<typeof marketing>("lander:marketing-state");
@@ -68,5 +96,9 @@ export function bootstrapMockupData() {
   mergeRecordStore("lander:settings:users", settings.users);
   mergeRecordStore("lander:settings:roles", settings.roles);
 
-  window.localStorage.setItem(VERSION_KEY, MOCKUP_VERSION);
+  try {
+    window.localStorage.setItem(VERSION_KEY, MOCKUP_VERSION);
+  } catch (error) {
+    console.error("[mockup] unable to persist preview version", error);
+  }
 }

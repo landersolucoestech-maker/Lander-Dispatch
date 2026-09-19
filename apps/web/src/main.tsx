@@ -5,6 +5,15 @@ import { bootstrapMockupData } from './mockup';
 
 import './index.css';
 
-bootstrapMockupData();
+try {
+  bootstrapMockupData();
+} catch (error) {
+  console.error('[mockup] bootstrap failed; rendering application without seeded preview data', error);
+}
 
-createRoot(document.getElementById('root')!).render(<App />);
+const root = document.getElementById('root');
+if (!root) {
+  throw new Error('Application root element was not found.');
+}
+
+createRoot(root).render(<App />);

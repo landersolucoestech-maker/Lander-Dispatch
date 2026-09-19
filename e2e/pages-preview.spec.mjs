@@ -34,7 +34,7 @@ test.describe("GitHub Pages mockup preview", () => {
       });
     }
 
-    const response = await page.goto("/Lander-Dispatch/", { waitUntil: "networkidle" });
+    const response = await page.goto("/Lander-Dispatch/?utm_source=chatgpt.com&mockReset=1", { waitUntil: "networkidle" });
     expect(response?.ok(), "Pages preview document should load").toBeTruthy();
 
     await page.waitForTimeout(1000);
